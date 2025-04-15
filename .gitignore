@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# Ignore muduo-master directory
+muduo-master/
+
+# Ignore .vscode directory
+.vscode/
+
+# Ignore /home/zrc/Json_Rpc/build/release-cpp11 directory
+build/release-cpp11/
