@@ -68,7 +68,9 @@ void Deserialize(std::string & instr)
 int main()
 {
     std::string str;
+    //序列化
     Serialize(&str);
+    //反序列化
     Deserialize(str);
     return 0;
 }
