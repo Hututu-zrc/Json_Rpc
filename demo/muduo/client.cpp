@@ -28,7 +28,7 @@ public:
     }
 
     // 发送消息的时候需要conn连接，但是这里属于自己编写的部分
-    // 所以Dict_Server里面需要自己维护一个_conn变量来保存回调函数的传来的连接指针
+    // 所以Dict_Server里面需要自己维护一个_conn变量来保存回调函数的传来的连接指针.
     bool Send(std::string &msg)
     {
         if (_conn->connected() == false)
