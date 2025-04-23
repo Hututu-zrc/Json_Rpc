@@ -9,6 +9,7 @@ namespace zrcrpc
     class JsonMessage : public BaseMessage
     {
     public:
+        virtual ~JsonMessage(){};
         using ptr = std::shared_ptr<JsonMessage>;
         virtual std::string Serialize() override
         {
@@ -35,13 +36,14 @@ namespace zrcrpc
     {
         public:
         using ptr=std::shared_ptr<JsonRequest>;
+
         private:
     };
     class RpcRequest:public JsonRequest
     {
         public:
         using ptr=std::shared_ptr<RpcRequest>;
-        
+
         private:
     }
     class JsonResponse:public JsonMessage
