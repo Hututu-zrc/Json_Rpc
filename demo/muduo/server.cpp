@@ -64,11 +64,12 @@ private:
         };
         std::string ret;
         auto it = dict_map.find(msg);
-        if (it == dict_map.end())
+        if (it == dict_map.end())//找不到
         {
             ret = "Unkonwn";
         }
-        ret = it->second;
+        else
+            ret = it->second;
         conn->send(ret);
     }
 

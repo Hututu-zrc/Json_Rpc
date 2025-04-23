@@ -44,6 +44,8 @@ private:
     // 编写了回调函数OnConnection和Onmessage
     // muduo库内部调用回调函数的时候，会传递回来连接的conn指针，方便操作
 
+    //  应该是构造函数里面调用connected函数->函数执行完毕->调用回调函数ONConnection->然后唤醒阻塞的进程，因为connected函数执行过程中是非阻塞的
+    
     void OnConnection(const muduo::net::TcpConnectionPtr &conn) // 连接成功的时候使用的
     {
         if (conn->connected())
@@ -72,7 +74,7 @@ private:
     muduo::net::TcpConnectionPtr _conn; // 获取客户端的连接
 
     // 这里必须使用EventLoopThread函数，因为_client.connect()是非阻塞的
-    // 非阻塞就导致loop的接收环节不能和住执行流在一起，这里要实现并发执行
+    // 非阻塞就导致loop的接收环节不能和主执行流在一起，这里要实现并发执行
     // 要么创建一个线程，单独去运行loop环节，这里muduo库里面实现了直接使用就好
     muduo::net::EventLoopThread _loopthreaed;
     muduo::net::EventLoop *_loop;
