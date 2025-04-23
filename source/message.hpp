@@ -43,7 +43,10 @@ namespace zrcrpc
     {
         public:
         using ptr=std::shared_ptr<RpcRequest>;
-
+        virtual bool check() override
+        {
+            
+        }
         private:
     }
     class JsonResponse:public JsonMessage
