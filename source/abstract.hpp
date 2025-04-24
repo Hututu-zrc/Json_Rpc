@@ -1,121 +1,113 @@
+/*
+    这个类属于抽象层，规定后续使用的基类
+*/
+
 #pragma once
-#include "fields.hpp"
 #include <memory>
 #include <functional>
+#include "fields.hpp"
 
+namespace zrcrpc {
 
-namespace zrcrpc
-{
-    class BaseMessage
-    {
-    public:
-        using ptr = std::shared_ptr<BaseMessage>;
-        virtual ~BaseMessage() {};
-        virtual std::string Id() { return _rid; };
-        virtual void SetId(const std::string id) { _rid = id; };
-        virtual MType Mtype() { return _mtype; };
-        virtual void SetMtype(MType &type) { _mtype = type; };
-        virtual std::string Serialize() = 0;
-        virtual bool Deserialize(const std::string &msg) = 0;
-        virtual bool check() = 0;
+class BaseMessage {
+public:
+    using Ptr = std::shared_ptr<BaseMessage>;
+    virtual ~BaseMessage() = default;
+    virtual std::string id() const { return id_; }
+    virtual void setId(const std::string& id) { id_ = id; }
+    virtual zrcrpc::MType messageType() const { return message_type_; }
+    virtual void setMessageType(const zrcrpc::MType& type) { message_type_ = type; }
+    virtual std::string serialize() const = 0;
+    virtual bool deserialize(const std::string& message) = 0;
+    virtual bool isValid() const = 0;
 
-    private:
-        MType _mtype;
-        std::string _rid;
-    };
+private:
+    zrcrpc::MType message_type_;
+    std::string id_;
+};
 
-    class BaseBuffer
-    {
-    public:
-        using ptr = std::shared_ptr<BaseBuffer>;
-        virtual ~BaseBuffer() {};
-        virtual size_t readableBytes() = 0;                   // 返回缓冲区里面的字节数
-        virtual int32_t peekInt32() = 0;                      // 尝试取出4字节数据,不删除
-        virtual bool retrieveInt32() = 0;                     // 删除四个字节数据
-        virtual int32_t readInt32() = 0;                      // 读取4字节数据，并且删除掉
-        virtual std::string retrieveAsString(size_t len) = 0; // 取出指定长度的字符串
-    private:
-    };
-    class BaseConnection
-    {
-    public:
-        using ptr = std::shared_ptr<BaseConnection>;
-        virtual ~BaseConnection() {};
-        virtual void send(const BaseMessage::ptr &msg) = 0;
-        virtual void shutdown() = 0;
-        virtual bool connected() = 0;
+class BaseBuffer {
+public:
+    using Ptr = std::shared_ptr<BaseBuffer>;
+    virtual ~BaseBuffer() = default;
+    virtual size_t readableBytes() const = 0;
+    virtual int32_t peekInt32() const = 0;
+    virtual bool retrieveInt32() = 0;
+    virtual int32_t readInt32() = 0;
+    virtual std::string retrieveAsString(size_t length) = 0;
 
-    private:
-    };
+private:
+};
 
-    class BaseProtocol
-    {
-    public:
-        virtual ~BaseProtocol() {};
+class BaseConnection {
+public:
+    using Ptr = std::shared_ptr<BaseConnection>;
+    virtual ~BaseConnection() = default;
+    virtual void send(const BaseMessage::Ptr& message) = 0;
+    virtual void shutdown() = 0;
+    virtual bool isConnected() const = 0;
 
-        virtual bool canProcessed(const BaseBuffer::ptr &buff) = 0;               // 看缓冲区是否存在数据
-        virtual bool onMessage(BaseBuffer::ptr &buff, BaseMessage::ptr &msg) = 0; // 从缓冲区中取出数据
-        virtual std::string serialize(const BaseMessage::ptr &msg) = 0;           // 如果存在数据就开始序列化
+private:
+};
 
-    private:
-    };
-    using ConnectionCallBack = std::function<void(BaseConnection::ptr &)>; // 连接建立成功时候的回调函数
-    using CloseCallBack = std::function<void(BaseConnection::ptr &)>;
-    using MessageCallBack = std::function<void(BaseConnection::ptr &, BaseBuffer::ptr &)>; // 暂时不知道干啥的???
-    class BaseServer
-    {
-    public:
-        using ptr = std::shared_ptr<BaseServer>;
-        virtual ~BaseServer() {};
-        virtual void setConnectionCallBack(const ConnectionCallBack &cb)
-        {
-            _cb_connection = cb;
-        }
-        virtual void setCloseCallBack(const CloseCallBack &cb)
-        {
-            _cb_close = cb;
-        }
-        virtual void setMessageCallBack(const MessageCallBack &cb)
-        {
-            _cb_message = cb;
-        }
-        virtual void start() = 0;
+class BaseProtocol {
+public:
+    virtual ~BaseProtocol() = default;
+    virtual bool canProcess(const BaseBuffer::Ptr& buffer) const = 0;
+    virtual bool onMessage(const BaseBuffer::Ptr& buffer, BaseMessage::Ptr& message) = 0;
+    virtual std::string serialize(const BaseMessage::Ptr& message) const = 0;
 
-    private:
-        // 内部设置回调函数变量
-        ConnectionCallBack _cb_connection;
-        CloseCallBack _cb_close;
-        MessageCallBack _cb_message;
-    };
+private:
+};
 
-    class BaseClient
-    {
+using ConnectionCallback = std::function<void(const BaseConnection::Ptr&)>;
+using CloseCallback = std::function<void(const BaseConnection::Ptr&)>;
+using MessageCallback = std::function<void(const BaseConnection::Ptr&, const BaseBuffer::Ptr&)>;
 
-    public:
-        using ptr = std::shared_ptr<BaseClient>;
-        virtual ~BaseClient() {};
-        virtual void setConnectionCallBack(const ConnectionCallBack &cb)
-        {
-            _cb_connection = cb;
-        }
-        virtual void setCloseCallBack(const CloseCallBack &cb)
-        {
-            _cb_close = cb;
-        }
-        virtual void setMessageCallBack(const MessageCallBack &cb)
-        {
-            _cb_message = cb;
-        }
-        virtual void connect() = 0;
-        virtual void send(const BaseMessage::ptr &msg) = 0;
-        virtual void shutdow() = 0;
-        virtual bool connected() = 0;
-        virtual BaseConnection::ptr connection() = 0;
+class BaseServer {
+public:
+    using Ptr = std::shared_ptr<BaseServer>;
+    virtual ~BaseServer() = default;
+    virtual void setConnectionCallback(const ConnectionCallback& callback) {
+        connection_callback_ = callback;
+    }
+    virtual void setCloseCallback(const CloseCallback& callback) {
+        close_callback_ = callback;
+    }
+    virtual void setMessageCallback(const MessageCallback& callback) {
+        message_callback_ = callback;
+    }
+    virtual void start() = 0;
 
-    private:
-        ConnectionCallBack _cb_connection;
-        CloseCallBack _cb_close;
-        MessageCallBack _cb_message;
-    };
+private:
+    ConnectionCallback connection_callback_;
+    CloseCallback close_callback_;
+    MessageCallback message_callback_;
+};
 
-}
+class BaseClient {
+public:
+    using Ptr = std::shared_ptr<BaseClient>;
+    virtual ~BaseClient() = default;
+    virtual void setConnectionCallback(const ConnectionCallback& callback) {
+        connection_callback_ = callback;
+    }
+    virtual void setCloseCallback(const CloseCallback& callback) {
+        close_callback_ = callback;
+    }
+    virtual void setMessageCallback(const MessageCallback& callback) {
+        message_callback_ = callback;
+    }
+    virtual void connect() = 0;
+    virtual void send(const BaseMessage::Ptr& message) = 0;
+    virtual void shutdown() = 0;
+    virtual bool isConnected() const = 0;
+    virtual BaseConnection::Ptr connection() const = 0;
+
+private:
+    ConnectionCallback connection_callback_;
+    CloseCallback close_callback_;
+    MessageCallback message_callback_;
+};
+
+}  // namespace zrcrpc

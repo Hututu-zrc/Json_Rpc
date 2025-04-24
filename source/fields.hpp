@@ -1,3 +1,6 @@
+/*                      该
+        类的主要作用就是规定后续代码要使用的字段和类型
+*/
 #pragma once
 #include <string>
 #include <unordered_map>
@@ -59,30 +62,31 @@ namespace zrcrpc
         {
             return "未知错误";
         }
+        return it->second;
     }
 
     enum class RpcType
     {
         REQ_SYNC = 0, // 同步请求
         REQ_ASYNC,    // 异步请求
-        REQ_CALLBACK // 回调请求
+        REQ_CALLBACK  // 回调请求
     };
 
     enum class TopicOptype
     {
-        TOPIC_CREATE=0,
-        TOCPIC_REMOVE,//删除主题
+        TOPIC_CREATE = 0,
+        TOCPIC_REMOVE, // 删除主题
         TOPIC_SUBSCRIBE,
-        TOPIC_CANCEL,//取消订阅
-        TOPIC_PUBLISH//消息发布
+        TOPIC_CANCEL, // 取消订阅
+        TOPIC_PUBLISH // 消息发布
     };
 
     enum class ServiceOptype
     {
-        SERVICE_REGISTRY=0,
-        SERVICE_DISCOVERY,
+        SERVICE_REGISTRY = 0,
         SERVICE_ONLINE,
-        SERVICE_OFFLINE
+        SERVICE_OFFLINE,
+        SERVICE_DISCOVERY
 
     };
 
