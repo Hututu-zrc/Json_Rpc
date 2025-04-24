@@ -101,7 +101,7 @@ int main()
     std::cout << static_cast<int>(service_response_ptr2->operationType()) << std::endl;
     std::vector<zrcrpc::Address> retrieved_addresses = service_response_ptr2->hosts();
     for (const auto& [ip, port] : retrieved_addresses) {
-        std::cout << ip << " " << port << std::endl;
+        std::cout << ip << "  " << port << std::endl;
     }
    
     return 0;
