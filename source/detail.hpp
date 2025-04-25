@@ -42,84 +42,86 @@ namespace zrcrpc
 #define ILOG(format, ...) LOG(LINF, format, ##__VA_ARGS__)
 #define ELOG(format, ...) LOG(LERR, format, ##__VA_ARGS__)
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class JSON
-{
-public:
-    // 实现数据的序列化
-    static bool serialize(const Json::Value &val, std::string &body)
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class JSON
     {
-        std::stringstream ss;
-        // 先实例化⼀个⼯⼚类对象
-        Json::StreamWriterBuilder swb;
-        // 通过⼯⼚类对象来⽣产派⽣类对象
-        std::unique_ptr<Json::StreamWriter> sw(swb.newStreamWriter());
-        int ret = sw->write(val, &ss);
-        if (ret != 0)
+    public:
+        // 实现数据的序列化
+        static bool serialize(const Json::Value &val, std::string &body)
         {
-            ELOG("json serialize failed");
-            return false;
-        }
-        body = ss.str();
-        return true;
-    }
-    // 实现json字符串的反序列化
-    static bool deserialize(const std::string &body, Json::Value &val)
-    {
-        // 实例化⼯⼚类对象
-        Json::CharReaderBuilder crb;
-        // ⽣产CharReader对象
-        std::string errs;
-        std::unique_ptr<Json::CharReader> cr(crb.newCharReader());
-        bool ret = cr->parse(body.c_str(), body.c_str() + body.size(), &val,
-                                &errs);
-        if (ret == false)
-        {
-            ELOG("json unserialize failed : %s", errs.c_str());
-            return false;
-        }
-        return true;
-    }
-};
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class UUID
-{
-public:
-    static std::string uuid()
-    {
-        std::stringstream ss;
-        // 1. 创建机器随机数对象
-        std::random_device rd;
-        // 2. 用rd生成的机器随机数为种子构造伪随机数
-        std::mt19937 generator(rd());
-        // 3.限定构造随机数的范围
-        std::uniform_int_distribution<int> distribution(0, 255); // 保证8进制的随机数都是两位的范围
-        // 4. 生成8个随机数，并且转换为八进制形式，每个八进制形式为2位
-        for (int i = 0; i < 8; i++)
-        {
-            if (i == 4 || i == 6)
+            std::stringstream ss;
+            // 先实例化⼀个⼯⼚类对象
+            Json::StreamWriterBuilder swb;
+            // 通过⼯⼚类对象来⽣产派⽣类对象
+            std::unique_ptr<Json::StreamWriter> sw(swb.newStreamWriter());
+            // 将Json::Value类型的数据变为字符串
+            int ret = sw->write(val, &ss);
+            if (ret != 0)
             {
-                ss << '-';
+                ELOG("json serialize failed");
+                return false;
             }
-            ss << std::setw(2) << std::setfill('0') << std::hex << distribution(generator);
+            body = ss.str();
+            return true;
         }
-        ss << '-';
-
-        // 生成8字节序号 总共就是2*(8*8)-1的范围，冲突可能性很小
-        //  8*8总共64bit位，每次取出一个字节出来加入字符串
-        // 这里使用atomic库来保证字节的原子性递增
-        std::atomic<size_t> seq(1);
-        size_t cur = seq.fetch_add(1); // 这个方法会原子地将 seq 的当前值加上 1，并且返回 seq 的旧值
-        for (int i = 7; i >= 0; i--)   // 从高位到地位的加入字符串中
+        // 实现json字符串的反序列化
+        static bool deserialize(const std::string &body, Json::Value &val)
         {
-            if (i == 5)
-                ss << '-';
-            ss << std::setw(2) << std::setfill('0') << std::hex << (cur >> (i * 8) & 0xff);
+            // 实例化⼯⼚类对象
+            Json::CharReaderBuilder crb;
+            // ⽣产CharReader对象
+            std::string errs;
+            std::unique_ptr<Json::CharReader> cr(crb.newCharReader());
+            // 将字符串解析为Json::Value的格式
+            bool ret = cr->parse(body.c_str(), body.c_str() + body.size(), &val,
+                                 &errs);
+            if (ret == false)
+            {
+                ELOG("json unserialize failed : %s", errs.c_str());
+                return false;
+            }
+            return true;
         }
+    };
 
-        return ss.str();
-    }
-};
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class UUID
+    {
+    public:
+        static std::string uuid()
+        {
+            std::stringstream ss;
+            // 1. 创建机器随机数对象
+            std::random_device rd;
+            // 2. 用rd生成的机器随机数为种子构造伪随机数
+            std::mt19937 generator(rd());
+            // 3.限定构造随机数的范围
+            std::uniform_int_distribution<int> distribution(0, 255); // 保证8进制的随机数都是两位的范围
+            // 4. 生成8个随机数，并且转换为八进制形式，每个八进制形式为2位
+            for (int i = 0; i < 8; i++)
+            {
+                if (i == 4 || i == 6)
+                {
+                    ss << '-';
+                }
+                ss << std::setw(2) << std::setfill('0') << std::hex << distribution(generator);
+            }
+            ss << '-';
+
+            // 生成8字节序号 总共就是2*(8*8)-1的范围，冲突可能性很小
+            //  8*8总共64bit位，每次取出一个字节出来加入字符串
+            // 这里使用atomic库来保证字节的原子性递增
+            std::atomic<size_t> seq(1);
+            size_t cur = seq.fetch_add(1); // 这个方法会原子地将 seq 的当前值加上 1，并且返回 seq 的旧值
+            for (int i = 7; i >= 0; i--)   // 从高位到地位的加入字符串中
+            {
+                if (i == 5)
+                    ss << '-';
+                ss << std::setw(2) << std::setfill('0') << std::hex << (cur >> (i * 8) & 0xff);
+            }
+
+            return ss.str();
+        }
+    };
 
 }
