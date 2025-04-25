@@ -387,7 +387,7 @@ namespace zrcrpc
         }
         virtual void connect() override
         {
-            _client.connect();//由于非阻塞的原因
+            _client.connect();//由于非阻塞的原因,这里使用该函数的时候，必须使用条件变量去等待
             _cntlatch.wait();
         }
         virtual void send(const BaseMessage::Ptr &message) override
