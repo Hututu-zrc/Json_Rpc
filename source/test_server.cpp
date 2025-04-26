@@ -2,7 +2,7 @@
 
 using namespace zrcrpc;
 
-// 这里的回调函数传入的都是BaseMessage,基类不能直接调用子类的方法
+// 这里的回调函数传入的都是BaseMessage,基类不能直接调用子类的方法.
 // 客户端发送的是Request请求消息，这里接收就是Request消息，然后根据Request消息构造Response函数进行处理
 void onRpcMessage(const BaseConnection::Ptr &conn, const RpcRequest::Ptr &msg)
 {
