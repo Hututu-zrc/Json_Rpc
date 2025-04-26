@@ -2,7 +2,7 @@
 
 using namespace zrcrpc;
 
-//这里的回调函数传入的都是基类的回调函数
+//这里的回调函数传入的都是BaseMessage
 void onRpcMessage(const BaseConnection::Ptr &conn, const BaseMessage::Ptr &msg)//发送消息的时候调用这个函数
 {
     std::string body = msg->serialize();
