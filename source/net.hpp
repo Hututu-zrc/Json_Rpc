@@ -73,12 +73,18 @@ namespace zrcrpc
         // 缓冲区里面的数据长度是否满足一次报文的长度
         virtual bool canProcess(const BaseBuffer::Ptr &buffer) const override
         {
+            // 缓冲区可能没有数据，muduo里面的断言就会报错
+            // std::cout<<<<std::endl;
+            DLOG("buffer->readableBytes():%d", (int)buffer->readableBytes());
             if (buffer->readableBytes() < _lenFieldsLength)
             {
+                DLOG("taget");
                 return false;
             }
             // 看能否后取出四个字节长度的数据,如果可以则取出四个字节，
+            DLOG("before peekint32");
             int32_t len = buffer->peekInt32();
+            DLOG("after peekInt32");
             if (buffer->readableBytes() < len + _lenFieldsLength)
                 return false;
 
@@ -127,14 +133,15 @@ namespace zrcrpc
             MType mtype = (MType)htonl((uint32_t)message->messageType());
             std::string id = message->id();
             int32_t idLen = htonl(id.size());
-            int32_t totalLen = htonl(_mtypeFieldsLength + _idFieldsLength + body.size());
+            int32_t h_totalLen = _mtypeFieldsLength + _idFieldsLength + id.size() + body.size();
+            int32_t totalLen = htonl(h_totalLen);
 
             // 这里to_string是错误的，假设totalLen是123
             // 理论上写入应该是二进制形式的四个字节07 00 00 00(这里使用16进制表示4个字节)
             // 实际上写入的“123”
             // 应该写入四个字节的数据的
             std::string sendData;
-            sendData.reserve(totalLen);
+            sendData.reserve(h_totalLen);
             sendData.append((char *)&totalLen, _lenFieldsLength);
             sendData.append((char *)&mtype, _mtypeFieldsLength);
             sendData.append((char *)&idLen, _idFieldsLength);
@@ -192,7 +199,7 @@ namespace zrcrpc
         }
         virtual bool isConnected() const override
         {
-            _con->connected();
+            return _con->connected();
         }
 
     private:
@@ -228,18 +235,6 @@ namespace zrcrpc
         {
         }
 
-        virtual void setConnectionCallback(const ConnectionCallback &callback)
-        {
-            connection_callback_ = callback;
-        }
-        virtual void setCloseCallback(const CloseCallback &callback)
-        {
-            close_callback_ = callback;
-        }
-        virtual void setMessageCallback(const MessageCallback &callback)
-        {
-            message_callback_ = callback;
-        }
         virtual void start() override
         {
             // 先设置回调函数到muduo库的回调函数当中
@@ -295,6 +290,7 @@ namespace zrcrpc
         }
 
         // 这个函数是创建消息的回调函数,给muduo库使用的，就是用来创建消息
+        // muduo库实现的是将从网络里面接收消息到缓冲区，这里的回调函数就是缓冲区进行处理
         void onMessage(const muduo::net::TcpConnectionPtr &conn, muduo::net::Buffer *buff, muduo::Timestamp)
         {
             BaseBuffer::Ptr muduoBuff = BufferFactory::create(buff);
@@ -304,15 +300,17 @@ namespace zrcrpc
 
                 // 1、判断缓冲区里面数据是否合法，能否提取
                 bool canprocess = _protocol->canProcess(muduoBuff);
-                if (canprocess == false)
+                if (canprocess == false) // 这里一般是数据量不足
                 {
                     // 存在一种情况，有人疯狂向服务器发送垃圾数据，都是无效信息
                     // 这时候就要判断，超过长度的数直接返回
+                    ELOG("进入canprocess");
                     if (muduoBuff->readableBytes() > MaxSize)
                     {
                         ELOG("Buffer is overflowed");
-                        break;
+                        break; // 如果是break，会产生死循环，一直打断，一直判断
                     }
+                    break;
                 }
 
                 // 2、将缓冲区里面的数据提取出来放在msg里面
@@ -322,7 +320,7 @@ namespace zrcrpc
                 {
                     conn->shutdown();
                     ELOG("This data is err in the buffer");
-                    break;
+                    return;
                 }
                 // 3、
 
@@ -332,6 +330,8 @@ namespace zrcrpc
                     return;
                 }
                 muduoConn = _cons[conn];
+                // 上面从缓冲区提取出来数据，但是不添加报文信息
+                // 下面继续调用用户传入的回调函数然后进行报头的处理
                 if (message_callback_)
                     message_callback_(muduoConn, muduoMsg);
             }
@@ -343,7 +343,7 @@ namespace zrcrpc
         BaseProtocol::Ptr _protocol; // 创建自己的BaseConnection时候需要用到这个，要在构造函数里面初始化
         std::mutex _mutex;
         std::unordered_map<muduo::net::TcpConnectionPtr, BaseConnection::Ptr> _cons; // 这里的_con属于共享资源，可能被并发访问所以要加锁
-        static const size_t MaxSize = (1 >> 16);
+        static const size_t MaxSize = (1 << 16);
     };
 
     class ServerFactory
@@ -365,30 +365,23 @@ namespace zrcrpc
     {
     public:
         using Ptr = std::shared_ptr<MuduoClient>;
-        MuduoClient(std::string ip, int port)
-            : _loop(_loopThread.startLoop()),
-              _client(_loop, muduo::net::InetAddress(ip, port), "MuduoClient"),
-              _cntlatch(1)
+        MuduoClient(std::string ip, int port) // 忘记初始化_protocol
+            : _protocol(ProtocolFactory::create()),
+              _cntlatch(1),
+              _loop(_loopThread.startLoop()),
+              _client(_loop, muduo::net::InetAddress(ip, port), "MuduoClient")
 
         {
         }
         virtual ~MuduoClient() = default;
-        virtual void setConnectionCallback(const ConnectionCallback &callback)
-        {
-            connection_callback_ = callback;
-        }
-        virtual void setCloseCallback(const CloseCallback &callback)
-        {
-            close_callback_ = callback;
-        }
-        virtual void setMessageCallback(const MessageCallback &callback)
-        {
-            message_callback_ = callback;
-        }
+
         virtual void connect() override
         {
-            _client.connect();//由于非阻塞的原因,这里使用该函数的时候，必须使用条件变量去等待
+            _client.setMessageCallback(std::bind(&MuduoClient::OnMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+            _client.setConnectionCallback(std::bind(&MuduoClient::OnConnection, this, std::placeholders::_1));
+            _client.connect(); // 由于非阻塞的原因,这里使用该函数的时候，必须使用条件变量去等待
             _cntlatch.wait();
+            DLOG("connect completed");
         }
         virtual void send(const BaseMessage::Ptr &message) override
         {
@@ -398,58 +391,102 @@ namespace zrcrpc
                 ILOG("disconnected");
                 return;
             }
-            connection()->send(message);
+            _conn->send(message);
         }
         virtual void shutdown() override
         {
             // return _client.
-            _conn->shutdown();
+            _client.disconnect();
         }
         virtual bool isConnected() const override
         {
-            return _conn->connected();
+            return _conn && _conn->isConnected();
         }
 
-        virtual BaseConnection::Ptr connection() const override
+        virtual BaseConnection::Ptr connection() const override // 返回_conn连接
         {
-            if(isConnected())
-            {
-                return ConnectionFactory::create(_conn,ProtocolFactory::create());
-            }
+            return _conn;
+            // if (isConnected())
+            // {
+            //     return ConnectionFactory::create(_conn, ProtocolFactory::create());
+            // }
         }
 
     private:
         void OnConnection(const muduo::net::TcpConnectionPtr &conn) // 连接的时候使用的
         {
-            if (conn->connected())//连接成功
+            if (conn->connected()) // 连接成功
             {
 
                 _cntlatch.countDown(); // 计数器--，唤醒条件变量
-                _conn = conn;
+                _conn = ConnectionFactory::create(conn, _protocol);
             }
-            else //连接断开
+            else // 连接断开
             {
 
                 _conn.reset();
             }
         }
 
-        // 断开连接的时候使用的
         void OnMessage(const muduo::net::TcpConnectionPtr &conn, muduo::net::Buffer *buff, muduo::Timestamp)
         {
+            BaseBuffer::Ptr muduoBuff = BufferFactory::create(buff);
+            while (1)
+            {
+
+                // 1、判断缓冲区里面数据是否合法，能否提取
+                bool canprocess = _protocol->canProcess(muduoBuff);
+                if (canprocess == false)
+                {
+                    // 存在一种情况，有人疯狂向服务器发送垃圾数据，都是无效信息
+                    // 这时候就要判断，超过长度的数直接返回
+                    if (muduoBuff->readableBytes() > MaxSize)
+                    {
+                        ELOG("Buffer is overflowed");
+                        return;
+                    }
+                    break;
+                }
+
+                // 2、将缓冲区里面的数据提取出来放在msg里面
+                BaseMessage::Ptr muduoMsg;
+                bool ret = _protocol->onMessage(muduoBuff, muduoMsg);
+                if (ret == false)
+                {
+                    conn->shutdown();
+                    ELOG("This data is err in the buffer");
+                    return;
+                }
+
+                if (message_callback_)
+                    message_callback_(_conn, muduoMsg);
+            }
         }
 
     private:
-        // 这里注意成员变量的顺序和初始化之间的顺序不能乱，要先初始化loop，在使用loop去初始化client
-        muduo::net::TcpConnectionPtr _conn;
-        muduo::net::EventLoop *_loop;
-        muduo::net::EventLoopThread _loopThread;
-        muduo::net::TcpClient _client;
+        // 这里注意成员变量的顺序和初始化之间的顺序不能乱，要先初始化loopthread,再loop，在使用loop去初始化client
+        BaseConnection::Ptr _conn;
+        BaseProtocol::Ptr _protocol;
         muduo::CountDownLatch _cntlatch;
+        muduo::net::EventLoopThread _loopThread;
+        muduo::net::EventLoop *_loop;
+        muduo::net::TcpClient _client;
+
         // BaseProtocol::Ptr _protocol; // 创建自己的BaseConnection时候需要用到这个，要在构造函数里面初始化
         // std::mutex _mutex;
         // std::unordered_map<muduo::net::TcpConnectionPtr, BaseConnection::Ptr> _cons; // 这里的_con属于共享资源，可能被并发访问所以要加锁
-        static const size_t MaxSize = (1 >> 16);
+        static const size_t MaxSize = (1 << 16);
+    };
+    class ClientFactory
+    {
+    public:
+        template <typename... Args>
+        static MuduoClient::Ptr create(Args... args)
+        {
+            return std::make_shared<MuduoClient>(std::forward<Args>(args)...);
+        }
+
+    private:
     };
 
 } // namespace zrcrpc
