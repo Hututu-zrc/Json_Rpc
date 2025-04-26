@@ -10,6 +10,7 @@ void onMessage(const BaseConnection::Ptr &conn, const BaseMessage::Ptr &msg)
 }
 int main()
 {
+    //
     auto client = ClientFactory::create("127.0.0.1",8888);
     client->setMessageCallback(onMessage);
     client->connect();
