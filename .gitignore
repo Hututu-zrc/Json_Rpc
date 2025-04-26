@@ -39,3 +39,9 @@ muduo-master/
 
 # Ignore /home/zrc/Json_Rpc/build/release-cpp11 directory
 build/release-cpp11/
+
+# Ignore compressed files
+*.tar.gz
+
+# Ignore muduo directory
+muduo/

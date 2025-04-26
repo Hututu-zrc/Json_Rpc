@@ -276,7 +276,7 @@ namespace zrcrpc
                 return std::make_shared<RpcRequest>();
             case MType::RSP_RPC:
                 return std::make_shared<RpcResponse>();
-            case MType::PEQ_TOPIC:
+            case MType::REQ_TOPIC:
                 return std::make_shared<TopicRequest>();
             case MType::RSP_TOPIC:
                 return std::make_shared<TopicResponse>();

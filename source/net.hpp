@@ -1,3 +1,4 @@
+#pragma once
 #include "muduo/net/TcpServer.h"
 #include "muduo/net/TcpClient.h"
 #include "muduo/net/TcpConnection.h"
@@ -423,7 +424,7 @@ namespace zrcrpc
             }
             else // 连接断开
             {
-
+                DLOG("连接断开");
                 _conn.reset();
             }
         }
@@ -459,7 +460,11 @@ namespace zrcrpc
                 }
 
                 if (message_callback_)
+                {
+                    DLOG("调用回调函数");
                     message_callback_(_conn, muduoMsg);
+                }
+                    
             }
         }
 

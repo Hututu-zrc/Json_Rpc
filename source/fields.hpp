@@ -25,7 +25,7 @@ namespace zrcrpc
     {
         REQ_RPC = 0, // RPC的请求和响应
         RSP_RPC,
-        PEQ_TOPIC, // 主题的请求和响应
+        REQ_TOPIC, // 主题的请求和响应
         RSP_TOPIC,
         REQ_SERVICE, // 服务的请求和响应
         RSP_SERVICE
