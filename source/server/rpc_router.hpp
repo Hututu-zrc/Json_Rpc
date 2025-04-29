@@ -53,7 +53,7 @@ namespace zrcrpc
                 }
                 return true;
             }
-            // 疑惑
+            // 这里是将方法的参数传入，然后进行处理，最后返回结果
             bool Call(const Json::Value &params, Json::Value &result)
             {
                 _call_back(params, result);
