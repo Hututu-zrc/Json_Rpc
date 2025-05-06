@@ -6,6 +6,11 @@ namespace zrcrpc
 {
     namespace server
     {
+        /*
+            1、这个hpp的核心就是接收客户端Rpc的请求，然后判断服务端是否可以提供该服务；
+            如果不能提供就返回空的结果和错误的状态码；如果可以提供该服务，那么就返回结果和正确的状态的码；
+            2、某个服务端对自己的服务的增删查改、创建新服务也是在这个hpp
+        */
         enum class ParamType
         {
             BOOL = 0,
