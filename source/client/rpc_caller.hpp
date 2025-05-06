@@ -90,11 +90,11 @@ namespace zrcrpc
                 // 这里必须使用指针，不然这个promise是局部变量，函数结束后会被释放掉
                 // 这里面的promise里面必须是Json::Value对象
                 auto resp_promise = std::make_shared<std::promise<Json::Value>>();
-                auto cb = std::bind(&CallBack_Promise, this, resp_promise, std::placeholders::_1);
+                auto cb = std::bind(&RpcCaller::CallBack_Promise, this, resp_promise, std::placeholders::_1);
                 bool ret = _requestor->send(conn, std::dynamic_pointer_cast<BaseMessage>(req), cb);
                 if (!ret)
                 {
-                    ELOG("发送消息失败");
+                    ELOG("异步Rpc请求失败!");
                     return false;
                 }
                 // 3、等待响应
@@ -104,7 +104,7 @@ namespace zrcrpc
 
             // 回调函数
             bool call(const BaseConnection::Ptr &conn, const std::string method,
-                      const Json::Value &params, JsonCallBackResponse &result)
+                      const Json::Value &params, JsonCallBackResponse &resp_cb)
             {
                 // 1、根据传入的消息组织请求
                 zrcrpc::RpcRequest::Ptr req = MessageFactory::create<RpcRequest>();
@@ -119,8 +119,15 @@ namespace zrcrpc
                 req->setParams(params);
                 // 2、发送请求
 
+             
+                auto cb = std::bind(&RpcCaller::CallBack_callback, this, resp_cb, std::placeholders::_1);
+                bool ret = _requestor->send(conn, std::dynamic_pointer_cast<BaseMessage>(req), cb);
+                if (!ret)
+                {
+                    ELOG("回调Rpc请求失败!");
+                    return false;
+                }
                 // 3、等待响应
-
                 return true;
             }
 
@@ -143,7 +150,7 @@ namespace zrcrpc
                 resp_promise->set_value(resp_msg->result());
             }
 
-            bool CallBack_Promise(std::shared_ptr<std::promise<Json::Value>> resp_promise, const BaseMessage::Ptr &resp)
+            bool CallBack_callback(const JsonCallBackResponse & callback_resp, const BaseMessage::Ptr &resp)
             {
                 auto resp_msg = std::dynamic_pointer_cast<RpcResponse>(resp);
                 if (resp_msg == false)
@@ -156,7 +163,7 @@ namespace zrcrpc
                     ELOG("响应码错误,%s", ErrReason(resp_msg->responseCode()));
                     return false;
                 }
-                resp_promise->set_value(resp_msg->result());
+                callback_resp(resp_msg->result());
             }
 
         private:
