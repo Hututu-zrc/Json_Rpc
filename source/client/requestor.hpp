@@ -23,7 +23,7 @@ namespace zrcrpc
             using Ptr = std::shared_ptr<Reuqestor>;
 
             using RequestCallBack = std::function<void(const BaseMessage::Ptr &)>; // 这里的作用暂时存疑
-            using AsynResponse = std::future<BaseMessage::Ptr>;
+            using AsynResponse = std::future<BaseMessage::Ptr>;                    // 针对response消息而言的future
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -49,7 +49,7 @@ namespace zrcrpc
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             // 当服务端收到响应以后的处理函数，这个函数主要就是提供给dispatcher模块的
-            void onResponse(const BaseConnection::Ptr &conn, BaseMessage::Ptr &msg)
+            void onResponse(const BaseConnection::Ptr &conn, const BaseMessage::Ptr &msg)
             {
                 std::string id = msg->id();
                 RequestDescribe::Ptr rdp = getRequestDescribe(id);

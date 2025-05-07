@@ -113,12 +113,10 @@ namespace zrcrpc
             */
         public:
             using Ptr = std::shared_ptr<SDFactory>;
-            using ServiceCallBack = std::function<void(zrcrpc::BaseConnection::Ptr &, zrcrpc::BaseMessage::Ptr &)>;
-            using ParamsDesc = std::pair<std::string, ParamType>;
 
             void setServiceName(const std::string &name) { _name = name; }
             void setParamsDesc(const std::string &paramName, const ParamType &ptype) { _param_desc.emplace_back(paramName, ptype); }
-            void setServiceServiceCallBack(const ServiceCallBack &cb) { _call_back = cb; }
+            void setServiceServiceCallBack(const ServiceDescribe::ServiceCallBack &cb) { _call_back = cb; }
             void setRtype(const ParamType &rtype) { _rtype = rtype; }
 
             ServiceDescribe::Ptr build()
@@ -131,10 +129,11 @@ namespace zrcrpc
 
         private:
             std::string _name;
-            std::vector<ParamsDesc> _param_desc;
-            ServiceCallBack _call_back;
+            std::vector<ServiceDescribe::ParamsDesc> _param_desc;
+            ServiceDescribe::ServiceCallBack _call_back;
             ParamType _rtype; // 返回值类型
         };
+
         class ServiceManager // 这个类实现对服务的管理，增删查改
         {
         public:
@@ -162,7 +161,7 @@ namespace zrcrpc
                 if (it == _services.end())
                 {
                     ELOG("查找的方法不存在");
-                    return std::make_shared<ServiceDescribe>();
+                    return std::shared_ptr<ServiceDescribe>();
                 }
                 return it->second;
             }
@@ -171,13 +170,14 @@ namespace zrcrpc
             std::mutex _mutex;
             std::unordered_map<std::string, ServiceDescribe::Ptr> _services;
         };
+
         class Rpc_Router // 这个类实现服务的路由功能，调用上述的类
         {
         public:
             using Ptr = std::shared_ptr<Rpc_Router>;
             Rpc_Router() : _service_manager(std::make_shared<ServiceManager>()) {}
             // 这个函数以后注册到dispatcher模块里面的业务处理函数
-            void onRequest(zrcrpc::BaseConnection::Ptr &conn, zrcrpc::RpcRequest::Ptr &request)
+            void onRequest(const zrcrpc::BaseConnection::Ptr &conn, const zrcrpc::RpcRequest::Ptr &request)
             {
                 // 1. 查询客户端请求的方法描述--判断当前服务端能否提供对应的服务
                 std::string method = request->method();
@@ -213,7 +213,7 @@ namespace zrcrpc
             }
 
             // 这里注册新方法的时候，需要插入很多信息，所以这里创建了SDFactory工厂类
-            void registryMethod(ServiceDescribe::Ptr &sdptr)
+            void registryMethod(ServiceDescribe::Ptr sdptr)
             {
                 _service_manager->insert(sdptr);
             }

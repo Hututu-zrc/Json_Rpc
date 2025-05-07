@@ -17,13 +17,16 @@ namespace zrcrpc
     {
         class RpcCaller
         {
+        public:
             using Ptr = std::shared_ptr<RpcCaller>;
-            using JsonAsynResponse = std::future<Json::Value>;
+            using JsonAsynResponse = std::future<Json::Value>; // 针对Json::Value类型的result结构而言的future
             using JsonCallBackResponse = std::function<void(const Json::Value &)>;
+
             RpcCaller(const Reuqestor::Ptr &requestor) : _requestor(requestor)
             {
             }
 
+        public:
             // 同步
             // 这里注意const和非const，有时候函数需要的const，但是传入的是非const，所以产生参数不匹配的情况
             bool call(const BaseConnection::Ptr &conn, const std::string method,
@@ -51,7 +54,7 @@ namespace zrcrpc
 
                 // 3、等待响应
                 auto resp_msg = std::dynamic_pointer_cast<RpcResponse>(resp);
-                if (resp_msg == false)
+                if (resp_msg == nullptr)
                 {
                     ELOG("向下转换失败");
                     return false;
@@ -89,6 +92,9 @@ namespace zrcrpc
                 // 2、发送请求
                 // 这里必须使用指针，不然这个promise是局部变量，函数结束后会被释放掉
                 // 这里面的promise里面必须是Json::Value对象
+
+                // 这里就是绑定这里的CallBack_callback函数，然后里面调用异步的send函数，然后阻塞在future.get()
+                // 当收到response报文的时候，这里的rsp就会被设置，然后onResponse里面会调用这个回调函数CallBack_Promise，这里面的promise会设置Json::Value类型的result;
                 auto resp_promise = std::make_shared<std::promise<Json::Value>>();
                 auto cb = std::bind(&RpcCaller::CallBack_Promise, this, resp_promise, std::placeholders::_1);
                 bool ret = _requestor->send(conn, std::dynamic_pointer_cast<BaseMessage>(req), cb);
@@ -119,7 +125,6 @@ namespace zrcrpc
                 req->setParams(params);
                 // 2、发送请求
 
-             
                 auto cb = std::bind(&RpcCaller::CallBack_callback, this, resp_cb, std::placeholders::_1);
                 bool ret = _requestor->send(conn, std::dynamic_pointer_cast<BaseMessage>(req), cb);
                 if (!ret)
@@ -137,7 +142,7 @@ namespace zrcrpc
 
                 // 这里的实际调用时机就是在requestor的onResponse里面，requestor里面的promise异步传入msg信息的时候，这里再次根据msg信息异步设置result对象
                 auto resp_msg = std::dynamic_pointer_cast<RpcResponse>(resp);
-                if (resp_msg == false)
+                if (resp_msg == nullptr)
                 {
                     ELOG("向下转换失败");
                     return false;
@@ -150,10 +155,10 @@ namespace zrcrpc
                 resp_promise->set_value(resp_msg->result());
             }
 
-            bool CallBack_callback(const JsonCallBackResponse & callback_resp, const BaseMessage::Ptr &resp)
+            bool CallBack_callback(const JsonCallBackResponse &callback_resp, const BaseMessage::Ptr &resp)
             {
                 auto resp_msg = std::dynamic_pointer_cast<RpcResponse>(resp);
-                if (resp_msg == false)
+                if (resp_msg == nullptr)
                 {
                     ELOG("向下转换失败");
                     return false;

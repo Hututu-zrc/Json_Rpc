@@ -73,7 +73,7 @@ namespace zrcrpc
                 conn->shutdown();
                 return;
             }
-
+            // 这里调用了callbacktemplate里面的onmessage去设置成员变量
             it->second->onMessage(conn, msg);
             return;
         }
