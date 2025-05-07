@@ -60,6 +60,7 @@ int main()
 
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
+    //测试异步调用
     zrcrpc::client::RpcCaller::JsonAsynResponse resp_future;
     paramas["num1"] = 210;
     paramas["num2"] = 500;
