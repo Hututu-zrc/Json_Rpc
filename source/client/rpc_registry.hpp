@@ -154,7 +154,7 @@ namespace zrcrpc
 
                     // 走到这里证明收到注册中心返回的服务响应，创建服务主机集合，添加到_method_hosts里面，然后返回
                     auto hosts = std::make_shared<Hosts>(resp_msg->hosts());
-                    if(hosts->empty())
+                    if(hosts->empty())//判断注册中心返回的服务主机集合是否为空
                     {
                         ELOG("没有主机可以提供该服务%s",method.c_str());
                         return false;
