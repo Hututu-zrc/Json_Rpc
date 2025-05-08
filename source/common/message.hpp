@@ -110,7 +110,7 @@ namespace zrcrpc
     private:
     };
 
-    using Address = std::pair<std::string, int>;
+    using Address = std::pair<std::string, int>;//ip-- port
 
     class ServiceRequest : public JsonRequest
     {
