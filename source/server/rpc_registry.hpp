@@ -16,7 +16,7 @@ namespace zrcrpc
             {
             public:
                 using Ptr = std::shared_ptr<Provider>;
-                std::mutex _mutex;
+                std::mutex _mutex;                 // 加锁保护_methods资源
                 BaseConnection::Ptr _conn;         // 注册中心和服务提供者之间的连接
                 Address _host;                     // ip--port 自己的主机地址
                 std::vector<std::string> _methods; // 可以提供的方法的名字
