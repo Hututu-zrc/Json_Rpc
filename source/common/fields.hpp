@@ -86,7 +86,8 @@ namespace zrcrpc
         SERVICE_REGISTRY = 0,
         SERVICE_ONLINE,
         SERVICE_OFFLINE,
-        SERVICE_DISCOVERY
+        SERVICE_DISCOVERY,
+        SERVICE_UNKOWNN
 
     };
 

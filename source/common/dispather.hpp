@@ -38,6 +38,8 @@ namespace zrcrpc
     private:
         MessageCallback _handler;
     };
+
+    
     class Dispatcher
     {
     public:

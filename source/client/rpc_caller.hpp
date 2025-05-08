@@ -61,7 +61,7 @@ namespace zrcrpc
                 }
                 if (resp_msg->responseCode() != RCode::OK)
                 {
-                    ELOG("响应码错误,%s", ErrReason(resp_msg->responseCode()));
+                    ELOG("响应码错误,%s", ErrReason(resp_msg->responseCode()).c_str());
                     return false;
                 }
                 result = resp_msg->result();

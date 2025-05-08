@@ -85,6 +85,21 @@ namespace zrcrpc
                 // 删除连接
                 _conns.erase(c);
             }
+            std::vector<Address> getMethodHosts(const std::string &method)
+            {
+                std::unique_lock<std::mutex> lock(_mutex);
+                std::vector<Address> hosts;
+                // 判断该服务是否存在提供者
+                if (_mprovides.find(method) == _mprovides.end())
+                {
+                    return hosts;
+                }
+                for (auto &provider : _mprovides[method])
+                {
+                    hosts.emplace_back(provider->_host);
+                }
+                return hosts;
+            }
 
         private:
             std::mutex _mutex;
@@ -128,7 +143,7 @@ namespace zrcrpc
                 {
                     std::unique_lock<std::mutex> lock();
                     auto it = _conns.find(c);
-                    if (it != _conns.end())
+                    if (it != _conns.end()) // 存在该连接的发现者，直接返回对应的发现者
                     {
                         discoverer = it->second;
                     }
@@ -219,15 +234,19 @@ namespace zrcrpc
                     // 服务提供者 1、提供服务注册 2、上线通知
                     _providers->createProvider(conn, msg->host(), msg->method());
                     _dicoveries->onLineNotify(msg->method(), msg->host());
+                    registryResponse(conn, msg);
                 }
                 else if (otype == ServiceOptype::SERVICE_DISCOVERY)
                 {
                     // 服务发现者 2、提供发现的服务
                     _dicoveries->createDiscovery(conn, msg->method());
+                    discovererResponse(conn, msg);
                 }
                 else
                 {
+
                     ELOG("服务类型出现错误");
+                    errResponse(conn, msg);
                 }
             }
             // 这里是需要判断连接时提供者还是发现者
@@ -250,6 +269,45 @@ namespace zrcrpc
                     // 清理发现者连接
                     _dicoveries->delDiscovery(conn);
                 }
+            }
+
+        private:
+            void errResponse(const BaseConnection::Ptr &conn, const BaseMessage::Ptr &msg)
+            {
+                // 直接返回错误的消息
+                auto resp_msg = zrcrpc::MessageFactory::create<ServiceResponse>();
+                resp_msg->setId(msg->id());
+                resp_msg->setMessageType(MType::RSP_SERVICE);
+                resp_msg->setOperationType(ServiceOptype::SERVICE_UNKOWNN);
+                resp_msg->setResponseCode(RCode::INVALID_OPTYPE);
+                conn->send(resp_msg);
+            }
+            void registryResponse(const BaseConnection::Ptr &conn, const ServiceRequest::Ptr &msg)
+            {
+                // 创建对应的响应消息
+                auto resp_msg = zrcrpc::MessageFactory::create<ServiceResponse>();
+                resp_msg->setId(msg->id());
+                resp_msg->setMessageType(MType::RSP_SERVICE);
+                resp_msg->setOperationType(ServiceOptype::SERVICE_REGISTRY); // 发现的响应消息不需要设置hosts和method
+                resp_msg->setResponseCode(RCode::OK);
+                conn->send(resp_msg);
+            }
+            void discovererResponse(const BaseConnection::Ptr &conn, const ServiceRequest::Ptr &msg)
+            {
+                auto resp_msg = zrcrpc::MessageFactory::create<ServiceResponse>();
+                resp_msg->setId(msg->id());
+                resp_msg->setMessageType(MType::RSP_SERVICE);
+                resp_msg->setOperationType(ServiceOptype::SERVICE_DISCOVERY);
+                resp_msg->setResponseCode(RCode::OK);
+                resp_msg->setMethod(msg->method());
+                // 这里返回能够提供该服务的所有的提供者
+                std::vector<Address> hosts = _providers->getMethodHosts(msg->method());
+                resp_msg->setHosts(hosts);
+                if (hosts.empty()) // 判断该服务是否存在提供者，如果不存在者修改返回的错误码
+                {
+                    resp_msg->setResponseCode(RCode::NOT_FOUND_SERVICE);
+                }
+                conn->send(resp_msg);
             }
 
         private:
