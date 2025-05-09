@@ -3,6 +3,10 @@
 #include "requestor.hpp"
 #include <vector>
 #include <unordered_map>
+
+/*
+    该模块主要实现的是服务注册、服务发现、服务上线/下线函数的编写
+*/
 namespace zrcrpc
 {
     namespace client
@@ -14,7 +18,7 @@ namespace zrcrpc
             */
         public:
             using Ptr = std::shared_ptr<Provider>;
-            bool registryService(const BaseConnection::Ptr &conn, std::string &method, const Address &host)
+            bool registryService(const BaseConnection::Ptr &conn, const std::string &method, const Address &host)
             {
                 // 构造servicerequest消息
                 auto req_msg = MessageFactory::create<ServiceRequest>();
@@ -101,15 +105,23 @@ namespace zrcrpc
             std::vector<Address> _hosts;
         };
 
-        class Dicoverer
+        class Discoverer
         {
             /*
                 1、该模块实现的就是向注册中心进行服务发现，收到注册中心返回回来的可使用的主机集合，这里实现rr轮转的方式实现负载均衡
-                2、提供dispather模块一个回调函数，实现服务的上线和下线的功能，实际就是添加或者删除_method_hosts里面的可用主机数量
+                2、提供dispather模块一个回调函数，实现服务的上线和下线的功能，实际就是添加或者删除_method_hosts里面的可用主机数量。
+                因为，发现客户端里面维护了《服务，可调用主机》这个哈希，所以服务的上线和下线功能也必须在这里实现比较好
             */
         public:
-            using Ptr = std::shared_ptr<Dicoverer>;
-            bool dicoverService(const BaseConnection::Ptr &conn, const std::string &method, Address &host)
+            using Ptr = std::shared_ptr<Discoverer>;
+            using OfflineCallBack = std::function<void(const Address &host)>;
+            /*
+                这个discoverService函数首先判断本主机是否已经存在服务主机集合，如果存在直接返回true
+                如果不存在，那么就向注册中心发送消息，拿到注册中心记录的可以提供该服务的主机集合
+            */
+
+            Discoverer(Reuqestor::Ptr requestor, OfflineCallBack cb) : _requestor(requestor), _cb(cb) {}
+            bool discoverService(const BaseConnection::Ptr &conn, const std::string &method, Address &host)
             {
                 // 首先判断当前是否存在method对应的服务主机集合，如果存在那么就直接返回
                 {
@@ -149,14 +161,14 @@ namespace zrcrpc
                     ELOG("服务响应错误,%s", ErrReason(resp_msg->responseCode()).c_str());
                     return false;
                 }
+
                 {
                     std::unique_lock<std::mutex> lock(_mutex);
-
                     // 走到这里证明收到注册中心返回的服务响应，创建服务主机集合，添加到_method_hosts里面，然后返回
                     auto hosts = std::make_shared<Hosts>(resp_msg->hosts());
-                    if(hosts->empty())//判断注册中心返回的服务主机集合是否为空
+                    if (hosts->empty()) // 判断注册中心返回的服务主机集合是否为空
                     {
-                        ELOG("没有主机可以提供该服务%s",method.c_str());
+                        ELOG("没有主机可以提供该服务%s", method.c_str());
                         return false;
                     }
                     _method_hosts[method] = hosts;
@@ -188,6 +200,9 @@ namespace zrcrpc
                     }
                     else if (otype == ServiceOptype::SERVICE_OFFLINE)
                     {
+                        /*
+                            服务下线的时候需要删除rpc_client里面的长连接信息
+                        */
                         auto it = _method_hosts.find(method);
                         if (it == _method_hosts.end()) // 不存在可以提供该服务的主机
                         {
@@ -197,6 +212,7 @@ namespace zrcrpc
                         else
                         {
                             it->second->delHost(msg->host());
+                            _cb(msg->host());
                         }
                     }
                     else
@@ -209,6 +225,7 @@ namespace zrcrpc
 
         private:
             std::mutex _mutex;
+            OfflineCallBack _cb;
             Reuqestor::Ptr _requestor;
             std::unordered_map<std::string, Hosts::Ptr> _method_hosts;
         };

@@ -1,8 +1,13 @@
 #pragma once
 #include "../common/net.hpp"
 #include "../common/message.hpp"
-#include <jsoncpp/json/json.h>
 #include <unordered_set>
+
+/*
+    该模块就是注册中心的实现，主要就管理提供者和发现者，对于两者的增删改查
+    然后向dispathcer模块提供接口
+*/
+
 namespace zrcrpc
 {
     namespace server

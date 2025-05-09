@@ -8,8 +8,8 @@
             只需要向外提供几个rpc调用的接口，内部实现向服务端发送请求，等待获取结果即可
         理解：
         1、该层的设计属于requestor.hpp的上层。
-        2、这里必须注意区分Rpc_Caller.hpp里面的回调和异步都是针对响应消息里面的result而言的，
-        requestor.hpp里面的回调和异步都是针对于消息而言的，不是result结果，所以rpc_caller.hpp里面需要包装一下
+        2、这里必须注意区分Rpc_Caller.hpp里面的回调和异步都是针对  “响应消息里面的result”   而言的，
+        requestor.hpp里面的回调和异步都是针对于  “消息”  而言的，不是result结果，所以rpc_caller.hpp里面需要包装一下
 */
 namespace zrcrpc
 {
@@ -29,7 +29,7 @@ namespace zrcrpc
         public:
             // 同步
             // 这里注意const和非const，有时候函数需要的const，但是传入的是非const，所以产生参数不匹配的情况
-            bool call(const BaseConnection::Ptr &conn, const std::string method,
+            bool call(const BaseConnection::Ptr &conn, const std::string &method,
                       const Json::Value &params, Json::Value &result)
             {
                 // 1、根据传入的消息组织请求
@@ -74,7 +74,7 @@ namespace zrcrpc
                 这里的设计根据用户传递进来的参数，来实现异步的调用。
                 前面的设计思路和同步是一样的，后面发送请求，就是创建promise指针对应里面保存结果Json::Value类型
             */
-            bool call(const BaseConnection::Ptr &conn, const std::string method,
+            bool call(const BaseConnection::Ptr &conn, const std::string &method,
                       const Json::Value &params, JsonAsynResponse &result)
             {
                 // 1、根据传入的消息组织请求
@@ -109,7 +109,7 @@ namespace zrcrpc
             }
 
             // 回调函数
-            bool call(const BaseConnection::Ptr &conn, const std::string method,
+            bool call(const BaseConnection::Ptr &conn, const std::string &method,
                       const Json::Value &params, JsonCallBackResponse &resp_cb)
             {
                 // 1、根据传入的消息组织请求
