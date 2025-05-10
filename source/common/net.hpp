@@ -76,16 +76,16 @@ namespace zrcrpc
         {
             // 缓冲区可能没有数据，muduo里面的断言就会报错
             // std::cout<<<<std::endl;
-            DLOG("buffer->readableBytes():%d", (int)buffer->readableBytes());
+            // DLOG("buffer->readableBytes():%d", (int)buffer->readableBytes());
             if (buffer->readableBytes() < _lenFieldsLength)
             {
-                DLOG("taget");
+                // DLOG("taget");
                 return false;
             }
             // 看能否后取出四个字节长度的数据,如果可以则取出四个字节，
-            DLOG("before peekint32");
+            // DLOG("before peekint32");
             int32_t len = buffer->peekInt32();
-            DLOG("after peekInt32");
+            // DLOG("after peekInt32");
             if (buffer->readableBytes() < len + _lenFieldsLength)
                 return false;
 
@@ -305,7 +305,7 @@ namespace zrcrpc
                 {
                     // 存在一种情况，有人疯狂向服务器发送垃圾数据，都是无效信息
                     // 这时候就要判断，超过长度的数直接返回
-                    ELOG("数据量不足");
+                    // ELOG("数据量不足");
                     if (muduoBuff->readableBytes() > MaxSize)
                     {
                         ELOG("Buffer is overflowed");
@@ -461,7 +461,7 @@ namespace zrcrpc
 
                 if (message_callback_)
                 {
-                    DLOG("调用回调函数");
+                    // DLOG("调用回调函数");
                     message_callback_(_conn, muduoMsg);
                 }
                     

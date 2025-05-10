@@ -247,12 +247,14 @@ namespace zrcrpc
             // 这里同样是 服务请求的消息类型，因为传入的是服务请求
             void onServiceRequest(const BaseConnection::Ptr &conn, const ServiceRequest::Ptr &msg)
             {
-                DLOG("进入到PDManger");
+                // DLOG("进入到PDManger");
                 // 先拿到消息里面的服务操作类型
                 auto otype = msg->operationType();
                 if (otype == ServiceOptype::SERVICE_REGISTRY)
                 {
                     // 服务提供者 1、提供服务注册 2、上线通知
+                    // printf("%s\n",msg->host().first.c_str());
+                    ILOG("  %s:%d 注册服务 %s",msg->host().first.c_str(),msg->host().second,msg->method().c_str());
                     _providers->createProvider(conn, msg->host(), msg->method());
                     _dicoveries->onLineNotify(msg->method(), msg->host());
                     registryResponse(conn, msg);
@@ -260,6 +262,8 @@ namespace zrcrpc
                 else if (otype == ServiceOptype::SERVICE_DISCOVERY)
                 {
                     // 服务发现者 2、提供发现的服务
+                    ILOG(" 客户端进行服务发现 %s",msg->method().c_str());
+
                     _dicoveries->createDiscovery(conn, msg->method());
                     discovererResponse(conn, msg);
                 }
@@ -280,6 +284,8 @@ namespace zrcrpc
                 auto provider = _providers->getProvider(conn);
                 if (provider.get() != nullptr) // 指针不为空，证明这个连接是提供者的连接
                 {
+                    ILOG("  %s:%d 服务下线",provider->_host.first.c_str(),provider->_host.second);
+
                     // 对提供方所提供的每个服务进行下线处理
                     for (auto &method : provider->_methods)
                     {

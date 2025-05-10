@@ -142,14 +142,14 @@ namespace zrcrpc
             }
             bool call(const std::string &method, const Json::Value &params, Json::Value &result)
             {
-                DLOG("进入到rpc_client的call");
+                // DLOG("进入到rpc_client的call");
                 auto client = get_Method_Client(method);
                 if (client.get() == nullptr)
                 {
                     ELOG("获取客户端失败");
                     return false;
                 }
-                DLOG("准备进入下一层caller");
+                // DLOG("准备进入下一层caller");
                 return _caller->call(client->connection(), method, params, result);
             }
             bool call(const std::string &method, const Json::Value &params, RpcCaller::JsonAsynResponse &result)
@@ -192,11 +192,18 @@ namespace zrcrpc
             }
             BaseClient::Ptr getClient(const Address &host)
             {
+                // DLOG("进入到getclient");
                 {
                     std::unique_lock<std::mutex> lock(_mutex);
                     auto it = _rpc_clients.find(host);
                     if (it == _rpc_clients.end())
+                    {
+                        // DLOG("在getclient里面创建的");
+                        // 这里必须返回BaseClient::Ptr(),不能在这里直接newclient(host)
+                        // 原因就是这里是加锁的状态，然后newclient里面存在一个insertclient，insertclient里面也会加锁，这里就会产生锁的竞争，导致程序死锁
+
                         return BaseClient::Ptr();
+                    }
                     else
                         return it->second;
                 }
@@ -205,7 +212,7 @@ namespace zrcrpc
             {
                 if (_enableDiscvory)
                 {
-                    DLOG("进入到get_Method_Client");
+                    // DLOG("进入到get_Method_Client");
                     // 1. 通过服务发现，获取服务提供者地址信息
                     zrcrpc::Address host;
                     // 这里的host是输出型参数
@@ -219,7 +226,10 @@ namespace zrcrpc
                     {
                         auto client = getClient(host);
                         if (client.get() == nullptr)
+                        {
+                            // DLOG("进入到getmethodclient 此时client为空 开始创建");
                             return newClient(host);
+                        }
                         return client;
                     }
                 }

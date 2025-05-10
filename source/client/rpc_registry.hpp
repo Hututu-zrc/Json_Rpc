@@ -71,7 +71,7 @@ namespace zrcrpc
             Address chooseHost()
             {
                 std::unique_lock<std::mutex> lock(_mutex);
-                return _hosts[_index % _hosts.size()];
+                return _hosts[(_index++ % _hosts.size())];
             }
 
             bool addHost(const Address &host)

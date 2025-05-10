@@ -32,7 +32,7 @@ namespace zrcrpc
             bool call(const BaseConnection::Ptr &conn, const std::string &method,
                       const Json::Value &params, Json::Value &result)
             {
-                DLOG("进入到caller的call");
+                // DLOG("进入到caller的call");
                 // 1、根据传入的消息组织请求
                 zrcrpc::RpcRequest::Ptr req = MessageFactory::create<RpcRequest>();
                 if (!req)
@@ -46,9 +46,9 @@ namespace zrcrpc
                 req->setParams(params);
                 // 2、发送请求
                 BaseMessage::Ptr resp;
-                DLOG("准备发送请求");
+                // DLOG("准备发送请求");
                 bool ret = _requestor->send(conn, std::dynamic_pointer_cast<BaseMessage>(req), resp);
-                DLOG("已经发送请求");
+                // DLOG("已经发送请求");
                 if (!ret)
                 {
                     ELOG("响应失败");

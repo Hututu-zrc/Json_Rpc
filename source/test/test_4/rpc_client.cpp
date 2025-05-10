@@ -33,7 +33,7 @@ int main()
     // 测试同步
     client.call(req->method(), paramas, result);
     std::cout << "sync result: " << result.asInt() << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    // std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // 测试异步调用
     zrcrpc::client::RpcCaller::JsonAsynResponse resp_future;
