@@ -2,16 +2,16 @@
 #include "../common/net.hpp"
 #include "../common/message.hpp"
 #include <future>
+
+
 /*
            该模块核心：
-            这个模块属于客户端的公共模块，不止于处理RpcCaller，还有TopicCaller等等
-            所以这里面没有写固定，只是对于BaseMessage的基本处理
+                这个模块属于客户端的公共模块，不止于处理RpcCaller，还有TopicCaller等等
+                所以这里面没有写固定，只是对于BaseMessage的基本处理
 
-           功能：
-           1、根据消息的id，合适时间返回响应报文
-           2、向外提供两个发送的接口，然后客户端调用该接口，不同的send接口有不同的describe描述
-           这里主要是callback回调函数和异步处理函数，当收到响应消息的时候，就调用对应的方法
 */
+
+
 namespace zrcrpc
 {
     namespace client
@@ -20,6 +20,14 @@ namespace zrcrpc
         class Reuqestor
         {
         public:
+
+            /*
+                功能：
+                    1、根据消息的id，合适时间返回响应报文
+                    2、向外提供两个发送的接口，然后客户端调用该接口，不同的send接口有不同的describe描述
+                    这里主要是callback回调函数和异步处理函数，当收到响应消息的时候，就调用对应的方法
+            */
+
             using Ptr = std::shared_ptr<Reuqestor>;
 
             using RequestCallBack = std::function<void(const BaseMessage::Ptr &)>; // 这里的作用暂时存疑
@@ -168,7 +176,7 @@ namespace zrcrpc
 
         private:
             std::mutex _mutex;
-            std::unordered_map<std::string, RequestDescribe::Ptr> _request_desc;
+            std::unordered_map<std::string, RequestDescribe::Ptr> _request_desc; //请求ID --- 对应的请求描述
         };
     }
 }

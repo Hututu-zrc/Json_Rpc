@@ -34,9 +34,9 @@ void onTopicMessage(const BaseConnection::Ptr &conn, const TopicRequest::Ptr &ms
 
 void Add(const Json::Value &params, Json::Value &result)
 {
-    int res=params["num1"].asInt() + params["num2"].asInt();
+    int res = params["num1"].asInt() + params["num2"].asInt();
     result = res;
-    std::cout<<"result: "<<res<<std::endl;
+    std::cout << "result: " << res << std::endl;
 }
 int main()
 {
@@ -60,10 +60,11 @@ int main()
     // 向router里面注册对应的服务
     router->registryMethod(sd->build());
 
-    // 这里的router_cb是提供给dispatcher的回调函数，用来
+    // 这里的router_cb是提供给dispatcher的回调函数
     auto router_cb = std::bind(&zrcrpc::server::Rpc_Router::onRequest, router.get(),
                                std::placeholders::_1, std::placeholders::_2);
 
+    // 这里需要理解为什么注册到dispatcher模块里面是rpcrequest消息，因为这个回调函数处理的就是rpcrequest消息
     dispatcher->registryCallBack<RpcRequest>(zrcrpc::MType::REQ_RPC, router_cb);
 
     auto server = ServerFactory::create(8888);

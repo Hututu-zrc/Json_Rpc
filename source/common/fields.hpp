@@ -65,6 +65,7 @@ namespace zrcrpc
         return it->second;
     }
 
+    // rpc消息的操作类型
     enum class RpcType
     {
         REQ_SYNC = 0, // 同步请求
@@ -72,6 +73,7 @@ namespace zrcrpc
         REQ_CALLBACK  // 回调请求
     };
 
+    // topic消息的操作类型
     enum class TopicOptype
     {
         TOPIC_CREATE = 0,
@@ -81,6 +83,7 @@ namespace zrcrpc
         TOPIC_PUBLISH // 消息发布
     };
 
+    // Service消息的操作类型
     enum class ServiceOptype
     {
         SERVICE_REGISTRY = 0,

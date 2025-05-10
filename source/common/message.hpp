@@ -9,6 +9,9 @@
 namespace zrcrpc
 {
 
+    // BaseMessage里面只有id和messagetype类型
+    // 这里的JsonMessage里面存在一个body类型，也就是消息传输的主体，
+    // 然后向外提供序列化和反序列化的接口
     class JsonMessage : public BaseMessage
     {
     public:
@@ -49,6 +52,7 @@ namespace zrcrpc
     class RpcRequest : public JsonRequest
     {
     public:
+        /* 消息的body里面存在两个属性：method、parameters */
         using Ptr = std::shared_ptr<RpcRequest>;
 
         bool isValid() const override
@@ -77,6 +81,8 @@ namespace zrcrpc
     class TopicRequest : public JsonRequest
     {
     public:
+        /*消息的body里面存在两个属性：key、otype、msg (  msg属于是只有otype==TOPIC_PUBLISH  才会使用这个字段) */
+
         using Ptr = std::shared_ptr<TopicRequest>;
 
         bool isValid() const override
@@ -110,12 +116,16 @@ namespace zrcrpc
     private:
     };
 
-    using Address = std::pair<std::string, int>;//ip-- port
+    using Address = std::pair<std::string, int>; // ip-- port
 
     class ServiceRequest : public JsonRequest
     {
     public:
         using Ptr = std::shared_ptr<ServiceRequest>;
+        /*
+            消息的body里面存在两个属性：method、otype、host
+            向某个主机host传递method方法，执行otype操作
+         */
 
         bool isValid() const override
         {
@@ -179,6 +189,12 @@ namespace zrcrpc
     class RpcResponse : public JsonResponse
     {
     public:
+
+        /*
+            消息的body里面存在两个属性：rcode、result 
+        
+        */
+
         using Ptr = std::shared_ptr<RpcResponse>;
 
         bool isValid() const override
@@ -205,6 +221,8 @@ namespace zrcrpc
     class TopicResponse : public JsonResponse
     {
     public:
+        /*消息的body里面存在两个属性：rcode */
+
         using Ptr = std::shared_ptr<TopicResponse>;
 
     private:
@@ -213,6 +231,11 @@ namespace zrcrpc
     class ServiceResponse : public JsonResponse
     {
     public:
+        /*  消息的body里面存在两个属性：rcode、otype     收到执行结果rcode，otype代表执行操作的类型
+            还存在method、hosts这两个属性，只有当otype==SERVICE_DISCOVERY
+            这里的服务发现是：收到注册中心返回的方法和对应的可提供服务主机集合
+        */
+
         using Ptr = std::shared_ptr<ServiceResponse>;
 
         bool isValid() const override

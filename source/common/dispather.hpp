@@ -5,6 +5,7 @@
 
 /*
     该模块的核心就是根据消息类型，提供对应的消息处理回调函数即可
+    判断registryCallBack<T>实例化是什么类型，就看注册的函数时干嘛的，如果是处理服务响应的，那就T=SERVICE_RESPONSE
 */
 namespace zrcrpc
 {

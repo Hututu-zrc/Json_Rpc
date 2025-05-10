@@ -5,6 +5,7 @@
 
 /*
     该模块就是注册中心的实现，主要就管理提供者和发现者，对于两者的增删改查
+    所有的连接都是相对于  注册中心和提供者   或者是   注册中心和发现者
     然后向dispathcer模块提供接口
 */
 
@@ -19,6 +20,12 @@ namespace zrcrpc
 
             struct Provider
             {
+                /*
+                    一个服务提供者需要维护的属性：
+                        1、和注册中心的连接
+                        2、自己的主机信息
+                        3、该服务提供者可以提供哪些服务
+                */
             public:
                 using Ptr = std::shared_ptr<Provider>;
                 std::mutex _mutex;                 // 加锁保护_methods资源
@@ -114,7 +121,7 @@ namespace zrcrpc
 
             // 这个是针对该服务器本身，连接该服务中心的conn连接对应相应的provider
             //  某连接和对应的provider，当连接断开的时候，找到对应的提供者，告知发现者，该提供者的所有服务全部下架
-            std::unordered_map<zrcrpc::BaseConnection::Ptr, Provider::Ptr> _conns; // 连接--对应的提供者
+            std::unordered_map<zrcrpc::BaseConnection::Ptr, Provider::Ptr> _conns; // 连接--对应提供者
         };
 
         class DiscovererManager // 服务发现其实就是询问注册中心，谁能为自己提供指定的服务，将节点信息给保存起来以待后用
@@ -125,7 +132,11 @@ namespace zrcrpc
             struct Discoverer // 某个连接（也就是某个可以提供服务的提供者）可以提供哪些方法
             {
             public:
-                // 服务的发现者属性： 需要的方法 && 客户端的连接
+                /*
+                    服务的发现者属性：
+                    1、该发现者所需要的方法
+                    2、维护一个和注册中心的连接
+                */
                 using Ptr = std::shared_ptr<Discoverer>;
                 std::mutex _mutex;
 
@@ -142,6 +153,7 @@ namespace zrcrpc
             };
 
         public:
+            // 这里就是创建一个发现者，根据连接判断；如果已经存在就直接返回，如果不存在就创建一个发现者，添加方法，然后添加进入哈希，然后返回
             Discoverer::Ptr createDiscovery(const BaseConnection::Ptr &c, const std::string &method)
             {
                 Discoverer::Ptr discoverer;
@@ -230,6 +242,9 @@ namespace zrcrpc
                 : _providers(std::make_shared<ProviderManager>()), _dicoveries(std::make_shared<DiscovererManager>())
             {
             }
+
+            // 收到服务请求，给出服务响应
+            // 这里同样是 服务请求的消息类型，因为传入的是服务请求
             void onServiceRequest(const BaseConnection::Ptr &conn, const ServiceRequest::Ptr &msg)
             {
                 // 先拿到消息里面的服务操作类型
@@ -254,6 +269,9 @@ namespace zrcrpc
                     errResponse(conn, msg);
                 }
             }
+
+
+            
             // 这里是需要判断连接时提供者还是发现者
             void onConnShutDown(const BaseConnection::Ptr &conn)
             {

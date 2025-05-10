@@ -11,6 +11,7 @@ namespace zrcrpc
             如果不能提供就返回空的结果和错误的状态码；如果可以提供该服务，那么就返回结果和正确的状态的码；
             2、某个服务端对自己的服务的增删查改、创建新服务也是在这个hpp
         */
+
         enum class ParamType
         {
             BOOL = 0,
@@ -30,7 +31,7 @@ namespace zrcrpc
         public:
             using Ptr = std::shared_ptr<ServiceDescribe>;
             using ServiceCallBack = std::function<void(const Json::Value &, Json::Value &)>;
-            using ParamsDesc = std::pair<std::string, ParamType>;
+            using ParamsDesc = std::pair<std::string, ParamType>; // 参数描述，比如"add"方法里面的参数就是"num1","num2" 都是对应INTEGRAL类型
             ServiceDescribe(std::string &&name, std::vector<ParamsDesc> &&paramdesc, ServiceCallBack &&cb, ParamType &&rtype)
                 : _method_name(name), _param_desc(paramdesc), _call_back(cb), _rtype(rtype)
             {
@@ -176,7 +177,9 @@ namespace zrcrpc
         public:
             using Ptr = std::shared_ptr<Rpc_Router>;
             Rpc_Router() : _service_manager(std::make_shared<ServiceManager>()) {}
-            // 这个函数以后注册到dispatcher模块里面的业务处理函数
+
+            // 这个函数以后注册到dispatcher模块里面的业务处理函数, **** 这里是rpc请求处理类型的消息***
+            // 参数里面就是外部传递进来的rpc请求消息，然后该函数进行处理，返回rpcrespnose消息
             void onRequest(const zrcrpc::BaseConnection::Ptr &conn, const zrcrpc::RpcRequest::Ptr &request)
             {
                 // 1. 查询客户端请求的方法描述--判断当前服务端能否提供对应的服务
@@ -213,9 +216,9 @@ namespace zrcrpc
             }
 
             // 这里注册新方法的时候，需要插入很多信息，所以这里创建了SDFactory工厂类
-            void registryMethod(ServiceDescribe::Ptr sdptr)
+            void registryMethod(ServiceDescribe::Ptr service)
             {
-                _service_manager->insert(sdptr);
+                _service_manager->insert(service);
             }
 
         private:
@@ -224,7 +227,7 @@ namespace zrcrpc
                           const Json::Value &res, RCode rcode)
             {
                 auto msg = MessageFactory::create<RpcResponse>();
-                msg->setId(req->id());
+                msg->setId(req->id()); // 这里就是为什么要传入req的原因
                 msg->setMessageType(zrcrpc::MType::RSP_RPC);
                 msg->setResponseCode(rcode);
                 msg->setResult(res);
