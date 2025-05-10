@@ -12,7 +12,7 @@ namespace zrcrpc
         {
         public:
             /* 该注册服务端，核心就是维护PDManager，该服务端就是服务中心，用来管理提供者和发现者的消息*/
-            using Ptr = std::shared_ptr<RegistryServer>();
+            using Ptr = std::shared_ptr<RegistryServer>;
             RegistryServer(int port)
                 : _dispatcher(DispatcherFactory::create()),
                   _pdmanager(std::make_shared<PDManager>())
@@ -30,9 +30,10 @@ namespace zrcrpc
                 auto close_cb = std::bind(&zrcrpc::server::RegistryServer::onConnShutDown, this,
                                           std::placeholders::_1);
 
-                _server->setCloseCallback(close_cb);
+                
                 _server = ServerFactory::create(port);
                 _server->setMessageCallback(message_cb);
+                _server->setCloseCallback(close_cb);
             }
 
             void start()
@@ -48,7 +49,7 @@ namespace zrcrpc
 
         private:
             Dispatcher::Ptr _dispatcher;
-            server::PDManager::Ptr _pdmanager;
+            PDManager::Ptr _pdmanager;
             BaseServer::Ptr _server;
         };
 
@@ -58,7 +59,7 @@ namespace zrcrpc
             /*
                 该服务端基本功能是提供Rpc消息响应发送
             */
-            using Ptr = std::shared_ptr<RpcServer>();
+            using Ptr = std::shared_ptr<RpcServer>;
             // access_addr是给server的主机地址，reg_addr是给_reg_client的主机地址，告诉客户端，注册中心的地址是多少
             // access_addr如果是云服务器就需要主要，这里的ip必须公网ip地址，不能是内网地址
             RpcServer(const Address &access_addr, bool enableRegClient = false, const Address &reg_addr = Address())

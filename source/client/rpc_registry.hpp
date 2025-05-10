@@ -6,8 +6,7 @@
 
 /*
     该模块主要实现的是服务注册、服务发现、服务上线/下线函数的编写
-    这里需要区分服务端的代码里面也可能包含着client
-    ***这里的Provider和Discoverer都是分开的，互不干涉***
+
 */
 namespace zrcrpc
 {
@@ -20,6 +19,7 @@ namespace zrcrpc
             */
         public:
             using Ptr = std::shared_ptr<Provider>;
+            Provider(const Reuqestor::Ptr &requestor) : _requestor(requestor) {}
             bool registryService(const BaseConnection::Ptr &conn, const std::string &method, const Address &host)
             {
                 // 构造servicerequest消息
@@ -31,7 +31,7 @@ namespace zrcrpc
                 req_msg->setHost(host);
 
                 // 使用requestor模块向注册中心发送请求
-                auto msg = MessageFactory::create<BaseMessage>();
+                BaseMessage::Ptr msg = MessageFactory::create<zrcrpc::ServiceResponse>();
                 // 第二个参数是常量引用，能绑定到由std::shared_ptr<ServiceRequest>隐式转换产生的std::shared_ptr<BaseMessage>临时对象，所以类型兼容
                 // 第三个参数是非常量引用，不能绑定到临时对象，因此std::shared_ptr<ServiceResponse>不能直接匹配std::shared_ptr<BaseMessage>&，类型不兼容。
                 bool ret = _requestor->send(conn, req_msg, msg);
@@ -145,7 +145,7 @@ namespace zrcrpc
                 req_msg->setMessageType(MType::REQ_SERVICE);
                 req_msg->setOperationType(ServiceOptype::SERVICE_DISCOVERY);
                 req_msg->setMethod(method);
-                auto send_msg = MessageFactory::create<BaseMessage>();
+                BaseMessage::Ptr send_msg = MessageFactory::create<ServiceResponse>();
                 bool ret = _requestor->send(conn, req_msg, send_msg);
                 if (ret == false)
                 {

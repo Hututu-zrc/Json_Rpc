@@ -6,22 +6,7 @@
 #include "../../client/rpc_caller.hpp"
 using namespace zrcrpc;
 
-// 这里的on***Message都是客户端向服务器发送消息以后，接收到服务器返回消息的时候调用的函数
-// 发送的request消息，接收的是response消息,然后对response消息进行处理，这里就是直接打印
-void onRpcMessage(const BaseConnection::Ptr &conn, const RpcResponse::Ptr &msg)
-{
-    DLOG("this is RpcMessage request");
-    std::string body = msg->serialize();
-    std::cout << body << std::endl;
-}
 
-void onTopicMessage(const BaseConnection::Ptr &conn, const TopicResponse::Ptr &msg)
-{
-    DLOG("this is TopicMessage request");
-
-    std::string body = msg->serialize();
-    std::cout << body << std::endl;
-}
 int main()
 {
 

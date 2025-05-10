@@ -64,8 +64,8 @@ namespace zrcrpc
                 这里相对于服务注册模块会向dispatcher模块里面多注册一个回调函数。
                 因为Discovery模块里面包括了一个服务上线和下线的回调函数
             */
-            using Ptr = std::shared_ptr<RegistryClient>;
-            DiscoveryClient(const std::string ip, int port, Discoverer::OfflineCallBack cb)
+            using Ptr = std::shared_ptr<DiscoveryClient>;
+            DiscoveryClient(const std::string ip, int port, const Discoverer::OfflineCallBack &cb)
                 : _requestor(std::make_shared<zrcrpc::client::Reuqestor>()),
                   _dicoverer(std::make_shared<zrcrpc::client::Discoverer>(_requestor, cb)),
                   _dispatcher(DispatcherFactory::create())
@@ -75,7 +75,7 @@ namespace zrcrpc
                 _dispatcher->registryCallBack<ServiceResponse>(zrcrpc::MType::RSP_SERVICE, requestor_cb);
 
                 // 这里需要多注册一个discover里面的回调函数给dispatcher模块，就是服务上线和下线函数
-                auto service_cb = std::bind(&zrcrpc::client::Discoverer::onServiceRequest, _requestor.get(), std::placeholders::_1, std::placeholders::_2);
+                auto service_cb = std::bind(&zrcrpc::client::Discoverer::onServiceRequest, _dicoverer.get(), std::placeholders::_1, std::placeholders::_2);
                 _dispatcher->registryCallBack<ServiceRequest>(zrcrpc::MType::REQ_SERVICE, service_cb);
 
                 // dispatcher模块提供给client的回调函数
@@ -127,7 +127,8 @@ namespace zrcrpc
                 // 这里就会有多个可以提供服务的客户端  add->{ {"127.0.0.1" ：8888},{"127.0.0.1" : 8899}  }
                 if (_enableDiscvory)
                 {
-                    _discovery_client = std::make_shared<DiscoveryClient>(ip, port, delClient);
+                    auto del = std::bind(&RpcClient::delClient, this, std::placeholders::_1);
+                    _discovery_client = std::make_shared<DiscoveryClient>(ip, port, del);
                 }
                 else // 如果不开启服务发现功能，那么这里就是正常的rpc客户端的响应
                 {
@@ -141,12 +142,14 @@ namespace zrcrpc
             }
             bool call(const std::string &method, const Json::Value &params, Json::Value &result)
             {
+                DLOG("进入到rpc_client的call");
                 auto client = get_Method_Client(method);
                 if (client.get() == nullptr)
                 {
                     ELOG("获取客户端失败");
                     return false;
                 }
+                DLOG("准备进入下一层caller");
                 return _caller->call(client->connection(), method, params, result);
             }
             bool call(const std::string &method, const Json::Value &params, RpcCaller::JsonAsynResponse &result)
@@ -159,7 +162,7 @@ namespace zrcrpc
                 }
                 return _caller->call(client->connection(), method, params, result);
             }
-            bool call(const std::string &method, const Json::Value &params, RpcCaller::JsonCallBackResponse &resp_cb)
+            bool call(const std::string &method, const Json::Value &params, const RpcCaller::JsonCallBackResponse &resp_cb)
             {
                 auto client = get_Method_Client(method);
                 if (client.get() == nullptr)
@@ -193,7 +196,7 @@ namespace zrcrpc
                     std::unique_lock<std::mutex> lock(_mutex);
                     auto it = _rpc_clients.find(host);
                     if (it == _rpc_clients.end())
-                        return newClient(host);
+                        return BaseClient::Ptr();
                     else
                         return it->second;
                 }
@@ -202,10 +205,11 @@ namespace zrcrpc
             {
                 if (_enableDiscvory)
                 {
+                    DLOG("进入到get_Method_Client");
                     // 1. 通过服务发现，获取服务提供者地址信息
                     zrcrpc::Address host;
                     // 这里的host是输出型参数
-                    auto ret = _discovery_client->registryService(method, host);
+                    auto ret = _discovery_client->discoverService(method, host);
                     if (ret == false)
                     {
                         ELOG("发现服务失败");
@@ -240,10 +244,13 @@ namespace zrcrpc
             }
             struct AddressHash
             {
-                size_t operator()(const Address &host)
+                size_t operator()(const Address &host) const
                 {
-                    std::string str = host.first + std::to_string(host.second);
-                    return std::hash<std::string>{}(str);
+                    // 使用 std::hash 计算各字段的哈希值
+                    size_t h1 = std::hash<std::string>{}(host.first); // IP 地址
+                    size_t h2 = std::hash<int>{}(host.second);        // 端口号
+
+                    return h1 ^ (h2 << 1); // 简单组合
                 }
             };
 

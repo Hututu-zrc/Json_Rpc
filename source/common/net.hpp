@@ -305,7 +305,7 @@ namespace zrcrpc
                 {
                     // 存在一种情况，有人疯狂向服务器发送垃圾数据，都是无效信息
                     // 这时候就要判断，超过长度的数直接返回
-                    ELOG("进入canprocess");
+                    ELOG("数据量不足");
                     if (muduoBuff->readableBytes() > MaxSize)
                     {
                         ELOG("Buffer is overflowed");

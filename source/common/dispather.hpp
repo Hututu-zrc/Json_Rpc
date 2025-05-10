@@ -40,8 +40,7 @@ namespace zrcrpc
         MessageCallback _handler;
     };
 
-    
-    class Dispatcher
+        class Dispatcher
     {
     public:
         using Ptr = std::shared_ptr<Dispatcher>;

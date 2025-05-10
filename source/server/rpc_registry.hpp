@@ -247,6 +247,7 @@ namespace zrcrpc
             // 这里同样是 服务请求的消息类型，因为传入的是服务请求
             void onServiceRequest(const BaseConnection::Ptr &conn, const ServiceRequest::Ptr &msg)
             {
+                DLOG("进入到PDManger");
                 // 先拿到消息里面的服务操作类型
                 auto otype = msg->operationType();
                 if (otype == ServiceOptype::SERVICE_REGISTRY)
@@ -277,7 +278,7 @@ namespace zrcrpc
             {
                 // 找到连接对应的提供方
                 auto provider = _providers->getProvider(conn);
-                if (provider.get() != nullptr) // 指针不为空，证明这个连接时提供者的连接
+                if (provider.get() != nullptr) // 指针不为空，证明这个连接是提供者的连接
                 {
                     // 对提供方所提供的每个服务进行下线处理
                     for (auto &method : provider->_methods)
