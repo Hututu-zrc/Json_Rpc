@@ -14,6 +14,9 @@ namespace zrcrpc
             1、注册客户端，只负责注册。
             2、发现客户端，只负责发现服务
             3、Rpc客户端，基本功能是负责Rpc响应消息的发送，然后兼具发现客户端的功能
+
+            这里需要区分服务端的代码里面也可能包含着client
+            ***这里的Provider和Discoverer都是分开的，互不干涉***
         */
 
         class RegistryClient
@@ -168,6 +171,9 @@ namespace zrcrpc
             }
 
         private:
+            /*
+                下面的增删查改都是为了开启服务发现功能而服务的，因为存在一个哈希
+            */
             BaseClient::Ptr newClient(const Address &host)
             {
                 // 根据对应的Address创建新的连接，给每个连接都添加对应的Dispatcher的回调函数，然后将新的连接添加到哈希表里面
