@@ -23,7 +23,7 @@ int main()
     sd->setRtype(zrcrpc::server::ParamType::INTEGRAL);
     sd->setServiceServiceCallBack(Add);
 
-    // 创建服务器，设置服务描述
+    // 创建服务器，开启服务发先功能
     zrcrpc::server::RpcServer server(Address("127.0.0.1", 9090),true ,Address("127.0.0.1", 8888));
     server.registryMethod(sd->build());
     server.start();
