@@ -58,8 +58,8 @@ namespace zrcrpc
 
         private:
             std::mutex _mutex;
-            std::unordered_map<std::string, Topic::Ptr> _subscribers;
-            std::unordered_map<BaseConnection::Ptr, Subsrciber::Ptr> _conns;
+            std::unordered_map<std::string, Topic::Ptr> _subscribers;//主题名字--主题对应的类
+            std::unordered_map<BaseConnection::Ptr, Subsrciber::Ptr> _conns;//连接 --- 订阅者（里面包含连接）
         };
     }
 }
