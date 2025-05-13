@@ -4,6 +4,7 @@
 #include "rpc_caller.hpp"
 #include "rpc_registry.hpp"
 #include "../common/dispather.hpp"
+#include "rpc_topic.hpp"
 
 namespace zrcrpc
 {
@@ -87,6 +88,10 @@ namespace zrcrpc
             bool discoverService(const std::string &method, Address &host) // 发现服务函数直接当作接口
             {
                 return _dicoverer->discoverService(_client->connection(), method, host);
+            }
+            void shutdown()
+            {
+                _client->shutdown();
             }
 
         private:
@@ -263,6 +268,10 @@ namespace zrcrpc
                     return h1 ^ (h2 << 1); // 简单组合
                 }
             };
+            void rpcClientShutdown()
+            {
+                _rpc_client->shutdown();
+            }
 
         private:
             std::mutex _mutex; // 主要是保护_rcp_clients哈希
@@ -273,6 +282,68 @@ namespace zrcrpc
             Dispatcher::Ptr _dispatcher;
             BaseClient::Ptr _rpc_client;
             std::unordered_map<Address, BaseClient::Ptr, AddressHash> _rpc_clients;
+        };
+
+        class TopicClient
+        {
+        public:
+            using Ptr = std::shared_ptr<TopicClient>;
+            TopicClient(const std::string &ip, const int &port)
+                : _requestor(std::make_shared<zrcrpc::client::Reuqestor>()),
+                  _topic_manager(std::make_shared<zrcrpc::client::TopicManager>(_requestor)),
+                  _dispatcher(DispatcherFactory::create())
+            {
+
+                // requestor模块提供给dispatcher模块的回调函数
+                auto requestor_cb = std::bind(&zrcrpc::client::Reuqestor::onResponse, _requestor.get(), std::placeholders::_1, std::placeholders::_2);
+                _dispatcher->registryCallBack<TopicResponse>(zrcrpc::MType::RSP_TOPIC, requestor_cb);
+
+                // topic_manager模块提供给dispatcher模块的回调函数
+                auto topic_cb = std::bind(&TopicManager::onPublish, _topic_manager.get(), std::placeholders::_1, std::placeholders::_2);
+                _dispatcher->registryCallBack<TopicRequest>(zrcrpc::MType::REQ_TOPIC, topic_cb);
+
+                // dispatcher模块提供给client的回调函数
+                auto message_cb = std::bind(&zrcrpc::Dispatcher::onMessage, _dispatcher.get(), std::placeholders::_1, std::placeholders::_2);
+                _client = ClientFactory::create(ip, port);
+                _client->setMessageCallback(message_cb);
+                _client->connect();
+            }
+            bool create(const std::string &key)
+            {
+                return _topic_manager->create(_client->connection(), key);
+            }
+            bool remove(const std::string &key)
+            {
+                return _topic_manager->remove(_client->connection(), key);
+            }
+            bool subscribe(const std::string &key, const TopicManager::SubscribeCallBack &cb)
+            {
+                return _topic_manager->subscribe(_client->connection(), key, cb);
+            }
+            bool cancelSubscribe(const std::string &key)
+            {
+                return _topic_manager->cancelSubscribe(_client->connection(), key);
+            }
+            bool publish(const std::string &key, const std::string &topic_msg)
+            {
+               return _topic_manager->publish(_client->connection(), key, topic_msg);
+            }
+            void shutdown()
+            {
+                _client->shutdown();
+            }
+
+        private:
+            /*
+                首先创建requestor，用来根据不同的ID返回不同的响应
+                然后创建_topic_manager参数，用来进行服务的注册，直接包装一遍接口，原来的conn变成现在的client连接
+                最后创建dispatcher模块，将requestor回调函数给dispatcher里面
+                最后将diapatcher的回调函数加入到client里面
+             */
+            Reuqestor::Ptr _requestor; // 根据响应消息的Id，返回对应的响应报文
+            zrcrpc::client::TopicManager::Ptr _topic_manager;
+            Dispatcher::Ptr _dispatcher;
+            BaseClient::Ptr _client;
         };
     }
 }

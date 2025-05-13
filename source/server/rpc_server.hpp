@@ -4,6 +4,7 @@
 #include "rpc_registry.hpp"
 #include "rpc_router.hpp"
 #include "../client/rpc_client.hpp"
+#include "rpc_topic.hpp"
 namespace zrcrpc
 {
     namespace server
@@ -30,7 +31,6 @@ namespace zrcrpc
                 auto close_cb = std::bind(&zrcrpc::server::RegistryServer::onConnShutDown, this,
                                           std::placeholders::_1);
 
-                
                 _server = ServerFactory::create(port);
                 _server->setMessageCallback(message_cb);
                 _server->setCloseCallback(close_cb);
@@ -105,6 +105,50 @@ namespace zrcrpc
             Rpc_Router::Ptr _router;
             Address _access_addr;
             client::RegistryClient::Ptr _reg_client;
+            BaseServer::Ptr _server;
+        };
+
+        class TopicServer
+        {
+        public:
+            /* 该注册服务端，核心就是维护PDManager，该服务端就是服务中心，用来管理提供者和发现者的消息*/
+            using Ptr = std::shared_ptr<TopicServer>;
+            TopicServer(int port)
+                : _dispatcher(DispatcherFactory::create()),
+                  _psmanager(std::make_shared<PSManager>())
+            {
+                // 这里的message_cb是提供给server的回调函数
+                auto message_cb = std::bind(&zrcrpc::Dispatcher::onMessage, _dispatcher.get(),
+                                            std::placeholders::_1, std::placeholders::_2);
+
+                // 这是_pdmanager提供给dispatcher类的服务请求回调函数
+                auto manager_cb = std::bind(&zrcrpc::server::PSManager::onTopicRequest, _psmanager.get(),
+                                            std::placeholders::_1, std::placeholders::_2);
+                _dispatcher->registryCallBack<TopicRequest>(zrcrpc::MType::REQ_TOPIC, manager_cb);
+
+                // 这是RegistryServer提供给server类的关闭连接的响应函数
+                auto close_cb = std::bind(&zrcrpc::server::TopicServer::onConnShutDown, this,
+                                          std::placeholders::_1);
+
+                _server = ServerFactory::create(port);
+                _server->setMessageCallback(message_cb);
+                _server->setCloseCallback(close_cb);
+            }
+
+            void start()
+            {
+                _server->start();
+            }
+
+        private:
+            void onConnShutDown(const BaseConnection::Ptr &conn)
+            {
+                _psmanager->onConnShutDown(conn);
+            }
+
+        private:
+            Dispatcher::Ptr _dispatcher;
+            PSManager::Ptr _psmanager;
             BaseServer::Ptr _server;
         };
     }
