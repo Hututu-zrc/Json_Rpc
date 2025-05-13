@@ -15,6 +15,7 @@ int  main()
         DLOG("第%d次发布消息",i);
         client->publish("hello","world"+std::to_string(i));
     }
+    //关闭连接
     client->shutdown();
     return 0;
 }
