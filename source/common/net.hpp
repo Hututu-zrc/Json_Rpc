@@ -71,7 +71,7 @@ namespace zrcrpc
         //|--package_len--|--MType--|--IdLen--|--Id--|--body--|
         virtual ~LVProtocol() noexcept = default;
 
-        // 缓冲区里面的数据长度是否满足一次报文的长度
+        // 判断缓冲区里面的数据长度是否满足一次报文的长度
         virtual bool canProcess(const BaseBuffer::Ptr &buffer) const override
         {
             // 缓冲区可能没有数据，muduo里面的断言就会报错
@@ -92,6 +92,8 @@ namespace zrcrpc
             return true;
         }
         // 将缓冲区数据拿出来，根据缓冲区数据构造一个message
+        // 这里的消息采用lv格式，即length--value
+        // 第一个参数length表示后续的长度属于这个报文
         //|--package_len--|--MType--|--IdLen--|--Id--|--body--|
         virtual bool onMessage(const BaseBuffer::Ptr &buffer, BaseMessage::Ptr &msg) override
         {
@@ -221,8 +223,10 @@ namespace zrcrpc
     };
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /*                MuduoServer类，
-     */
+    /*                MuduoServer类， 实现三个函数start,onConnection,onMessage函数
+                        onConnection实现连接断开和连接时候使用
+                        onMessage消息到来的时候使用
+    */
 
     class MuduoServer : public BaseServer
     {
@@ -259,7 +263,8 @@ namespace zrcrpc
             // 所以这里使用哈希映射，将muduo库的connection和自己编写的Connection连接起来
             if (conn->connected()) // 连接成功
             {
-                // 创建自己的连接
+                // 1、创建自己的连接,将muduo库的connection和BaseConnection映射关系建立起来
+                // 2、然后调用自己的连接回调函数
                 BaseConnection::Ptr muduoConn = ConnectionFactory::create(conn, _protocol);
                 {
                     std::unique_lock<std::mutex> lock(_mutex);
@@ -275,6 +280,8 @@ namespace zrcrpc
             }
             else // 连接断开，这里不是连接失败
             {
+                // 1、删除哈希映射关系
+                // 2、调用关闭回调函数
                 BaseConnection::Ptr muduoConn;
                 {
                     std::unique_lock<std::mutex> lock(_mutex);
@@ -314,7 +321,7 @@ namespace zrcrpc
                     break;
                 }
 
-                // 2、将缓冲区里面的数据提取出来放在msg里面
+                // 2、将缓冲区里面的数据提取出来放在BaseMsg里面
                 BaseMessage::Ptr muduoMsg;
                 bool ret = _protocol->onMessage(muduoBuff, muduoMsg);
                 if (ret == false)
@@ -323,7 +330,7 @@ namespace zrcrpc
                     ELOG("This data is err in the buffer");
                     return;
                 }
-                // 3、
+                // 3、根据muduo库的连接查哈希映射找到自己的BaseConnnection连接
 
                 if (_cons.find(conn) == _cons.end())
                 {
@@ -464,7 +471,6 @@ namespace zrcrpc
                     // DLOG("调用回调函数");
                     message_callback_(_conn, muduoMsg);
                 }
-                    
             }
         }
 

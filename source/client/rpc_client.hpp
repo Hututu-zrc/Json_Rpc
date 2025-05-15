@@ -52,6 +52,8 @@ namespace zrcrpc
                 最后创建dispatcher模块，将requestor回调函数给dispatcher里面
                 最后将diapatcher的回调函数加入到client里面
              */
+
+            // requestor的核心是用来初始化Provider,具体的发送功能在Provider里面
             Reuqestor::Ptr _requestor; // 根据响应消息的Id，返回对应的响应报文
             zrcrpc::client::Provider::Ptr _provider;
             Dispatcher::Ptr _dispatcher;
@@ -98,7 +100,7 @@ namespace zrcrpc
             /*
                 和注册模块差不多
             */
-            Reuqestor::Ptr _requestor;
+            Reuqestor::Ptr _requestor; // 也是用来初始化Discoverer模块的
             zrcrpc::client::Discoverer::Ptr _dicoverer;
             Dispatcher::Ptr _dispatcher;
             BaseClient::Ptr _client;
@@ -109,10 +111,12 @@ namespace zrcrpc
         public:
             /*
                 该模块实现主要是分两种，一种是不开启服务发现的功能，一种是开启服务发现的功能
-                1、不开启服务发现功能：
-                    那么就是简单的rpc请求消息发送客户端，里面只需要维护一个_rpc_client就可以了。
+                *** 很重要的就是，这里如果不开启服务发现，那么传入的就是服务提供者的地址，维护一个_rpc_client，里面传入服务提供者的地址，就是服务请求直接发送到服务提供者 ***
+                *** 如果是开启服务发现，传入的就是注册中心的地址，每次就是发送请求到注册中心，然后注册中心选择服务器，返回可提供服务端的ip+port地址，然后创建
+                一个client，并且根据地址维护起来实现长连接的方式，当服务下线的时候，就删除这个连接 ***
+
                 2、开启服务发现功能：
-                    (1)开启服务发现功能，那么就需要维护一个《主机，对应的客户端》这个哈希集合，提供对该哈希的增删查改接口
+                    (1)开启服务发现功能，那么就需要维护一个<主机，对应的客户端>这个哈希集合，提供对该哈希的增删查改接口
                     (2)这个模块最终实现还是rpc响应消息的发送，所以还是将rpc_caller里面的call函数包装一遍
                     (3)由于维护了_rpc_clients哈希，当服务下线的时候，需要删除掉这个哈希里面的映射关系，所以需要向外提供一个delClient的接口
             */
@@ -249,7 +253,7 @@ namespace zrcrpc
                 std::unique_lock<std::mutex> lock(_mutex);
                 _rpc_clients[host] = client;
             }
-            void delClient(const Address &host)
+            void delClient(const Address &host)//这个函数是提供给discover_client里面的discoverer的下线函数使用的
             {
                 std::unique_lock<std::mutex> lock(_mutex);
                 auto it = _rpc_clients.find(host);
@@ -281,6 +285,9 @@ namespace zrcrpc
             RpcCaller::Ptr _caller; // 用来进行rpc请求消息的发送
             Dispatcher::Ptr _dispatcher;
             BaseClient::Ptr _rpc_client;
+
+            //这里的目的是为了维护一个长连接，将曾经请求的某个主机的地址和连接维护起来
+            //只有当这边的服务提供方断开连接的时候，才开始删除连接
             std::unordered_map<Address, BaseClient::Ptr, AddressHash> _rpc_clients;
         };
 
@@ -326,7 +333,7 @@ namespace zrcrpc
             }
             bool publish(const std::string &key, const std::string &topic_msg)
             {
-               return _topic_manager->publish(_client->connection(), key, topic_msg);
+                return _topic_manager->publish(_client->connection(), key, topic_msg);
             }
             void shutdown()
             {

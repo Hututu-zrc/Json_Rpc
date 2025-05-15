@@ -68,7 +68,7 @@ namespace zrcrpc
                   _router(std::make_shared<Rpc_Router>()),
                   _access_addr(access_addr)
             {
-                if (_enableRegClient) // 如果服务注册功能开启，那么这里就创建注册客户端
+                if (_enableRegClient) // 如果服务注册功能开启，那么这里就创建注册客户端，注册客户端传入的是注册中心的地址
                 {
                     _reg_client = std::make_shared<client::RegistryClient>(reg_addr.first, reg_addr.second);
                 }

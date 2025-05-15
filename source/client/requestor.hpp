@@ -7,6 +7,8 @@
            该模块核心：
                 这个模块属于客户端的公共模块，不止于处理RpcCaller，还有TopicCaller等等
                 所以这里面没有写固定，只是对于BaseMessage的基本处理
+                实现的其实是消息响应的中转中心，核心就是根据消息的id，合适时间返回响应报文
+            主要功能：提供send接口发送到服务提供方；提供一个收到响应消息的回调函数
 
 */
 
@@ -26,14 +28,14 @@ namespace zrcrpc
             */
 
             using Ptr = std::shared_ptr<Reuqestor>;
-
-            using RequestCallBack = std::function<void(const BaseMessage::Ptr &)>; // 这里的作用暂时存疑
-            using AsynResponse = std::future<BaseMessage::Ptr>;                    // 针对response消息而言的future
+            // 这个回调函数是提供给rpc_caller模块的，主要是接收到响应消息的时候，获取响应消息的处理
+            using RequestCallBack = std::function<void(const BaseMessage::Ptr &)>;
+            using AsynResponse = std::future<BaseMessage::Ptr>; // 针对response消息而言的future
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-            // 这里就是为了解决请求响应产生的时序问题，如何判断返回的响应报文是不是自己想要的响应报文
-            // 将原本的request请求进行封装
+            // 内部类
+            //  这里就是为了解决多线程当中存在的请求响应产生的时序问题，如何判断返回的响应报文是不是自己想要的响应报文
+            //  将原本的request请求进行封装
             struct RequestDescribe
             {
                 /*
@@ -53,7 +55,7 @@ namespace zrcrpc
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-            // 当服务端收到响应以后的处理函数，这个函数主要就是提供给dispatcher模块的
+            // 当中转中心收到响应以后的处理函数，这个函数主要就是提供给dispatcher模块的
             void onResponse(const BaseConnection::Ptr &conn, const BaseMessage::Ptr &msg)
             {
                 std::string id = msg->id();
@@ -86,7 +88,7 @@ namespace zrcrpc
                 delRequestDescribe(id);
             }
 
-            // 下面是提供客户端的接口，客户端发送的时候使用，用来设置选择回调函数还是异步控制函数
+            // 下面是提供发送端的接口，发送的时候使用，用来设置选择回调函数还是异步控制函数
             // 这里的send的主要逻辑就是，创建requestdescribe描述对象，然后conn发送数据就好
 
             // 回调函数
@@ -104,6 +106,8 @@ namespace zrcrpc
             }
 
             // 同步
+            // 这里的同步是根据异步实现的，实际上就是直接拿到异步返回数据
+            // 这里的异步在上层压根没使用，就是在同步这块使用了，上层都是自己重新实现下异步的
             bool send(const BaseConnection::Ptr &conn, const BaseMessage::Ptr &req, BaseMessage::Ptr &rsp)
             {
                 AsynResponse asyn_resp;

@@ -243,6 +243,12 @@ namespace zrcrpc
             {
             }
 
+            /*
+                1、收到服务请求的时候，判断类型，然后实现转发，然后根据接收到的消息，给请求方响应
+                2、提供一个连接关闭的函数，实现连接关闭的时候，对于请求方管理和提供方管理的操作（删除）
+            */
+
+
             // 收到服务请求，给出服务响应
             // 这里同样是 服务请求的消息类型，因为传入的是服务请求
             void onServiceRequest(const BaseConnection::Ptr &conn, const ServiceRequest::Ptr &msg)
@@ -294,7 +300,7 @@ namespace zrcrpc
                     // 删除该提供方的连接
                     _providers->delProvider(conn);
                 }
-                else // 发现者连接
+                else // 发现者连接，发现者不需要做操作
                 {
                     // 清理发现者连接
                     _dicoveries->delDiscovery(conn);

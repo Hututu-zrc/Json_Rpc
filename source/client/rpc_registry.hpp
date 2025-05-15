@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 /*
-    该模块主要实现的是服务注册、服务发现、服务上线/下线函数的编写
+    该模块主要实现的是提供服务注册接口、服务发现接口、服务上线/下线回调函数的编写
 
 */
 namespace zrcrpc
@@ -80,7 +80,7 @@ namespace zrcrpc
                 _hosts.emplace_back(host);
                 return true;
             }
-            bool delHost(const Address &host)
+            bool delHost(const Address &host)//这里是vector存储的，所以必须遍历找到对应的主机，然后删除
             {
                 std::unique_lock<std::mutex> lock(_mutex);
                 auto it = _hosts.begin();
@@ -118,7 +118,7 @@ namespace zrcrpc
             using Ptr = std::shared_ptr<Discoverer>;
             using OfflineCallBack = std::function<void(const Address &host)>;
             /*
-                这个discoverService函数首先判断本主机是否已经存在服务主机集合，如果存在直接返回true
+                这个discoverService函数首先判断本主机是否已经存在服务主机集合，如果存在就选择一个可以提供服务的服务端，将该服务端的主机设置到输出型参数当中，然后返回true
                 如果不存在，那么就向注册中心发送消息，拿到注册中心记录的可以提供该服务的主机集合
             */
 
@@ -186,7 +186,7 @@ namespace zrcrpc
                 std::string method = msg->method();
                 {
                     std::unique_lock<std::mutex> lock(_mutex);
-                    if (otype == ServiceOptype::SERVICE_ONLINE)
+                    if (otype == ServiceOptype::SERVICE_ONLINE) // 上线
                     {
                         auto it = _method_hosts.find(method);
                         if (it == _method_hosts.end()) // 之前不存在可以提供该服务的主机，现在直接创建
@@ -200,7 +200,7 @@ namespace zrcrpc
                             it->second->addHost(msg->host());
                         }
                     }
-                    else if (otype == ServiceOptype::SERVICE_OFFLINE)
+                    else if (otype == ServiceOptype::SERVICE_OFFLINE) // 服务下线
                     {
                         /*
                             服务下线的时候需要删除rpc_client里面的长连接信息
@@ -213,7 +213,7 @@ namespace zrcrpc
                         }
                         else
                         {
-                            it->second->delHost(msg->host());
+                            it->second->delHost(msg->host());//这里是将该方法的对应主机删除
                             _cb(msg->host());
                         }
                     }

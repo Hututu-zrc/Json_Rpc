@@ -21,9 +21,9 @@ int main()
     sd->setParamsDesc("num1", zrcrpc::server::ParamType::INTEGRAL);
     sd->setParamsDesc("num2", zrcrpc::server::ParamType::INTEGRAL);
     sd->setRtype(zrcrpc::server::ParamType::INTEGRAL);
-    sd->setServiceServiceCallBack(Add);
+    sd->setServiceServiceCallBack(Add);//这里就是将服务计算函数注册到服务描述里面
 
-    // 创建服务器，开启服务发先功能
+    // 创建服务器，开启服务注册功能
 
     zrcrpc::server::RpcServer server(Address("127.0.0.1", 9090),true ,Address("127.0.0.1", 8888));
     server.registryMethod(sd->build());

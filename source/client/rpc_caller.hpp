@@ -22,11 +22,16 @@ namespace zrcrpc
             using JsonAsynResponse = std::future<Json::Value>; // 针对Json::Value类型的result结构而言的future
             using JsonCallBackResponse = std::function<void(const Json::Value &)>;
 
-            RpcCaller(const Reuqestor::Ptr &requestor) : _requestor(requestor)
-            {
-            }
+            RpcCaller(const Reuqestor::Ptr &requestor) : _requestor(requestor) {}
 
         public:
+            /*
+                这里的三个call函数，除了同步的call函数是直接拿到对应的值，其余的都是通过requestor模块里面的回调函数的形式
+                异步call和同步call里面都是调用的是 回调类型的send函数，回调类型的send拿到响应消息后，这里再看是异步模式还是回调模式
+                如果是异步就调用CallBack_Promise去对future<Json::Value>去设置值
+                如果是回调类型就是直接向回调函数里面传入获得的Json::Value对象
+            */
+
             // 同步
             // 这里注意const和非const，有时候函数需要的const，但是传入的是非const，所以产生参数不匹配的情况
             bool call(const BaseConnection::Ptr &conn, const std::string &method,
@@ -107,13 +112,13 @@ namespace zrcrpc
                     return false;
                 }
                 // 3、等待响应
-                result = resp_promise->get_future();
+                result = resp_promise->get_future(); // 将promise<Json::Value>的futrue给外部的result，然后外部异步的获取结果
                 return true;
             }
 
             // 回调函数
             bool call(const BaseConnection::Ptr &conn, const std::string &method,
-                      const Json::Value &params,const  JsonCallBackResponse &resp_cb)
+                      const Json::Value &params, const JsonCallBackResponse &resp_cb)
             {
                 // 1、根据传入的消息组织请求
                 zrcrpc::RpcRequest::Ptr req = MessageFactory::create<RpcRequest>();
@@ -140,6 +145,7 @@ namespace zrcrpc
             }
 
         private:
+            /*  这里的两个callback，主要就是拿到requesor模块里面的响应消息，然后根据响应消息调用对应的回调模块或者是设置异步参数  */
             bool CallBack_Promise(std::shared_ptr<std::promise<Json::Value>> resp_promise, const BaseMessage::Ptr &resp)
             {
 
@@ -155,7 +161,7 @@ namespace zrcrpc
                     ELOG("响应码错误,%s", ErrReason(resp_msg->responseCode()));
                     return false;
                 }
-                resp_promise->set_value(resp_msg->result());
+                resp_promise->set_value(resp_msg->result()); // 设置异步参数
             }
 
             bool CallBack_callback(const JsonCallBackResponse &callback_resp, const BaseMessage::Ptr &resp)
@@ -171,7 +177,7 @@ namespace zrcrpc
                     ELOG("响应码错误,%s", ErrReason(resp_msg->responseCode()));
                     return false;
                 }
-                callback_resp(resp_msg->result());
+                callback_resp(resp_msg->result()); // 调用回调函数
             }
 
         private:

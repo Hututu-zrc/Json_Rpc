@@ -8,7 +8,7 @@ namespace zrcrpc
     {
         /*
             1、这个hpp的核心就是接收客户端Rpc的请求，然后判断服务端是否可以提供该服务；
-            如果不能提供就返回空的结果和错误的状态码；如果可以提供该服务，那么就返回结果和正确的状态的码；
+            如果不能提供就返回空的结果和错误的状态码；如果可以提供该服务，那么就根据传入的回调函数返回结果和正确的状态的码；
             2、某个服务端对自己的服务的增删查改、创建新服务也是在这个hpp
         */
 
@@ -25,8 +25,8 @@ namespace zrcrpc
         class ServiceDescribe
         {
             /*
-                该类实现对服务描述的校验
-                以及校验成功调用对应的回调函数
+                该类实现对服务描述的传递的参数类型，参数个数进行校验，保证后续计算结果不出错
+                以及校验成功调用对应的回调函数（这个回调函数是参数校验成功以后，实现的参数计算，然后返回结果），外部传入这个计算函数，这里回调使用
             */
         public:
             using Ptr = std::shared_ptr<ServiceDescribe>;
@@ -131,8 +131,8 @@ namespace zrcrpc
         private:
             std::string _name;
             std::vector<ServiceDescribe::ParamsDesc> _param_desc;
-            ServiceDescribe::ServiceCallBack _call_back;
-            ParamType _rtype; // 返回值类型
+            ServiceDescribe::ServiceCallBack _call_back; // 根据参数计算结果的函数，由外部用户传入
+            ParamType _rtype;                            // 返回值类型
         };
 
         class ServiceManager // 这个类实现对服务的管理，增删查改
