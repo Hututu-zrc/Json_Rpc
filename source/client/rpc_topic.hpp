@@ -110,7 +110,7 @@ namespace zrcrpc
                 }
                 return true;
             }
-
+            //下面这几个函数都是给哈希使用的
             void addSubscribeCallBack(const std::string &key, const SubscribeCallBack &cb)
             {
                 std::unique_lock<std::mutex> lock(_mutex);
