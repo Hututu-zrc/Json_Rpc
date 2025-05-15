@@ -7,6 +7,7 @@ void callback(const std::string & key, const std::string &msg)
 int main()
 {
     auto client = std::make_shared<zrcrpc::client::TopicClient>("127.0.0.1", 8888);
+    //订阅者需要创建主题后才能订阅该消息
     auto ret = client->create("hello");
     if (ret == false)
     {
