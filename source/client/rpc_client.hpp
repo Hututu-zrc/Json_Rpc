@@ -287,7 +287,7 @@ namespace zrcrpc
             BaseClient::Ptr _rpc_client;
 
             //这里的目的是为了维护一个长连接，将曾经请求的某个主机的地址和连接维护起来
-            //只有当这边的服务提供方断开连接的时候，才开始删除连接
+            //只有当这边的服务提供方下线服务的的时候，才开始删除连接
             std::unordered_map<Address, BaseClient::Ptr, AddressHash> _rpc_clients;
         };
 

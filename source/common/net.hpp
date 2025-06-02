@@ -91,10 +91,12 @@ namespace zrcrpc
 
             return true;
         }
-        // 将缓冲区数据拿出来，根据缓冲区数据构造一个message
+
         // 这里的消息采用lv格式，即length--value
         // 第一个参数length表示后续的长度属于这个报文
         //|--package_len--|--MType--|--IdLen--|--Id--|--body--|
+
+        //这个函数就相当于反序列化，将缓冲区数据拿出来，根据缓冲区数据构造一个message
         virtual bool onMessage(const BaseBuffer::Ptr &buffer, BaseMessage::Ptr &msg) override
         {
 
@@ -141,7 +143,7 @@ namespace zrcrpc
 
             // 这里to_string是错误的，假设totalLen是123
             // 理论上写入应该是二进制形式的四个字节07 00 00 00(这里使用16进制表示4个字节)
-            // 实际上写入的“123”
+            // 实际上写入的"123"
             // 应该写入四个字节的数据的
             std::string sendData;
             sendData.reserve(h_totalLen);

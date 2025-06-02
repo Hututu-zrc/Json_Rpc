@@ -50,7 +50,7 @@ namespace zrcrpc
                 BaseMessage::Ptr _request;
                 std::promise<BaseMessage::Ptr> _response;
                 RequestCallBack _cb;
-                RpcType _rtype;
+                RpcType _rtype;//这里的rpc请求的类型
             };
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

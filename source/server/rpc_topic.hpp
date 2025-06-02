@@ -44,6 +44,7 @@ namespace zrcrpc
                 BaseConnection::Ptr _conn;               // 每个订阅者维护一个自己对应的连接
                 std::unordered_set<std::string> _topics; // 每个订阅者自己所订阅主题全部都管理起来
             };
+
             struct Topic
             {
             public:
@@ -119,13 +120,14 @@ namespace zrcrpc
                     auto it_conn = _conns.find(conn);
                     if (it_conn == _conns.end())
                         return;
-                    subscriber=it_conn->second;
-                    //由于subscriber里面维护的string集合，这里遍历string集合
-                    for(auto & topic_name:subscriber->_topics)
+                    subscriber = it_conn->second;
+                    // 由于subscriber里面维护的string集合，这里遍历string集合
+                    for (auto &topic_name : subscriber->_topics)
                     {
-                        //通过_topics找到topicname对应的Topic::Ptr
-                        auto it_topic=_topics.find(topic_name);
-                        if(it_topic==_topics.end())    continue;
+                        // 通过_topics找到topicname对应的Topic::Ptr
+                        auto it_topic = _topics.find(topic_name);
+                        if (it_topic == _topics.end())
+                            continue;
                         topics.emplace_back(it_topic->second);
                     }
                     _conns.erase(conn);
@@ -155,6 +157,7 @@ namespace zrcrpc
                 resp_msg->setResponseCode(RCode::OK);
                 conn->send(resp_msg);
             }
+
             // 根据msg里面的信息创建一个主题
             void topicCreate(const BaseConnection::Ptr &conn, const TopicRequest::Ptr &msg)
             {

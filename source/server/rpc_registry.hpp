@@ -13,7 +13,7 @@ namespace zrcrpc
 {
     namespace server
     {
-        class ProviderManager // 一个节点主机，将自己所能提供的服务，在注册中心进行登记
+        class ProviderManager 
         {
         public:
             using Ptr = std::shared_ptr<ProviderManager>;
@@ -124,7 +124,7 @@ namespace zrcrpc
             std::unordered_map<zrcrpc::BaseConnection::Ptr, Provider::Ptr> _conns; // 连接--对应提供者
         };
 
-        class DiscovererManager // 服务发现其实就是询问注册中心，谁能为自己提供指定的服务，将节点信息给保存起来以待后用
+        class DiscovererManager 
         {
         public:
             using Ptr = std::shared_ptr<DiscovererManager>;

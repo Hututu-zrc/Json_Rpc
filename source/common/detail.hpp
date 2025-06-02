@@ -72,7 +72,7 @@ namespace zrcrpc
             // ⽣产CharReader对象
             std::string errs;
             std::unique_ptr<Json::CharReader> cr(crb.newCharReader());
-            // 将字符串解析为Json::Value的格式
+            // 将body字符串解析为Json::Value的格式，放入到val里面
             bool ret = cr->parse(body.c_str(), body.c_str() + body.size(), &val,
                                  &errs);
             if (ret == false)

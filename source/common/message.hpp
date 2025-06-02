@@ -123,7 +123,7 @@ namespace zrcrpc
     public:
         using Ptr = std::shared_ptr<ServiceRequest>;
         /*
-            消息的body里面存在两个属性：method、otype、host
+            消息的body里面存在两个属性：method、otype、host(服务发现的时候才会使用这个属性)
             向某个主机host传递method方法，执行otype操作
          */
 
